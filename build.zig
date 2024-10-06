@@ -12,6 +12,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+	exe.addIncludePath(b.path("raylib/include"));
+	exe.addObjectFile(b.path("raylib/lib/libraylib.a"));
+	exe.linkLibC(); // needed for raylib
     b.installArtifact(exe);
 
 	// build run
