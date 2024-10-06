@@ -6,8 +6,9 @@ const rl = @cImport({
 });
 
 // settings
-const tile_side = 40; // side length of a tile / square
-const speed = 0.1;
+const tile_side = 80; // side length of a tile / square
+const player_side = 40; // side length of a player sized square
+const speed = 0.05;
 const screen_width = 1920;
 const screen_height = 1080;
 
@@ -18,10 +19,16 @@ pub fn main() void {
 
 	// Main player
 	var player: rl.Rectangle = rl.Rectangle{
-		.x = 0 - tile_side / 2,
-		.y = 0 - tile_side / 2,
-		.width = tile_side,
-		.height = tile_side,
+		.x = 0 - player_side / 2,
+		.y = 0 - player_side / 2,
+		.width = player_side,
+		.height = player_side,
+	};
+
+	// level
+	const level: [2]rl.Rectangle = [_]rl.Rectangle{
+		rl.Rectangle{.x = 0 + tile_side, .y = 0, .width = tile_side, .height = tile_side},
+		rl.Rectangle{.x = 0 + 3 * tile_side, .y = 0, .width = tile_side, .height = tile_side},
 	};
 
 	// Camera
@@ -31,15 +38,27 @@ pub fn main() void {
 	camera.zoom = 1.0;
 
 	while (!rl.WindowShouldClose()) {
+		// Rectangle for checking player collision
+		var player_collision: rl.Rectangle = player;
+
 		// input. Only 1 key a frame for now
 		if (rl.IsKeyDown(rl.KEY_W))
-			player.y -= speed
+			player_collision.y -= speed
 		else if (rl.IsKeyDown(rl.KEY_S))
-			player.y += speed
+			player_collision.y += speed
 		else if (rl.IsKeyDown(rl.KEY_A))
-			player.x -= speed
+			player_collision.x -= speed
 		else if (rl.IsKeyDown(rl.KEY_D))
-			player.x += speed;
+			player_collision.x += speed;
+
+		// only update player position of player_collision hasn't collided.
+		if (
+			for (level) |rect| {
+				if (rl.CheckCollisionRecs(rect, player_collision))
+					break false;
+			}
+			else true
+		) player = player_collision;
 
 		camera.target = rl.Vector2{.x = player.x, .y = player.y};
 
@@ -52,9 +71,9 @@ pub fn main() void {
 		// Player camera
 		rl.BeginMode2D(camera);
 		defer rl.EndMode2D();
-		// reference rectangles
-		rl.DrawRectangle(0, 0, tile_side, tile_side, rl.LIGHTGRAY);
-		rl.DrawRectangle(0 + 2 * tile_side, 0, tile_side, tile_side, rl.LIGHTGRAY);
+		// draw level
+		for (level) |rect|
+			rl.DrawRectangleRec(rect, rl.LIGHTGRAY);
 
 		rl.DrawRectangleRec(player, rl.RED);
 	}
