@@ -20,6 +20,13 @@ pub fn build(b: *std.Build) void {
         .name = "skrr",
         .root_module = exe_mod,
     });
+
+	// We include raylib's header file path and statically link an object file
+	// This way we can import raylib stuff in our program
+	exe.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
+	exe.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
+	exe.linkLibC();
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
@@ -45,7 +52,7 @@ pub fn build(b: *std.Build) void {
     // This creates a build step. It will be visible in the `zig build --help` menu,
     // and can be selected like this: `zig build run`
     // This will evaluate the `run` step rather than the default, which is "install".
-    const run_step = b.step("run", "Run the app");
+    const run_step = b.step("run", "Run the game client");
     run_step.dependOn(&run_cmd.step);
 
     // Creates a step for unit testing. This only builds the test executable
