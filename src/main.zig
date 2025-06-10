@@ -9,9 +9,21 @@ const rl = @cImport({
 const window_width = 1440;
 const window_height = 900;
 
-pub fn main() void {
+const TILE = 120;
 
+// all coordinates are in world space
+var player_pos: rl.Vector2 = rl.Vector2{.x = 0, .y = 0};
+var player: rl.Rectangle = rl.Rectangle{
+	.x = 0 - TILE / 2,
+	.y = 0 - TILE / 2,
+	.width = TILE,
+	.height = TILE,
+};
+
+pub fn main() void {
+	// This needs to be set for making the window tiling on sway
 	rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);
+
 	rl.InitWindow(window_width, window_height, "skrr");
 	defer rl.CloseWindow();
 
@@ -20,10 +32,8 @@ pub fn main() void {
 		defer rl.EndDrawing();
 
 		rl.ClearBackground(rl.BLACK);
-		rl.DrawText("Hello world", window_width / 2, window_height / 2, 20, rl.RAYWHITE);
+		rl.DrawRectangleRec(player, rl.RED);
 	}
-
-	std.debug.print("Hello world\n", .{});
 }
 
 test "hello world" {
