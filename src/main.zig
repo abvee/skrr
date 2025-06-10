@@ -36,18 +36,35 @@ pub fn main() void {
 		.zoom = 1, // TODO: maybe change this for resolution resizing stuff ? 
 	};
 
-	while (!rl.WindowShouldClose()) {
-		if (rl.IsKeyDown(rl.KEY_A))
-			player_pos.x -= SPEED
-		else if (rl.IsKeyDown(rl.KEY_D))
-			player_pos.x += SPEED
-		else if (rl.IsKeyDown(rl.KEY_W))
-			player_pos.y -= SPEED
-		else if (rl.IsKeyDown(rl.KEY_S))
-			player_pos.y += SPEED;
+	const level = [_]rl.Rectangle{rl.Rectangle{
+		.x = TILE / 2,
+		.y = -TILE / 2,
+		.width = TILE,
+		.height = TILE,
+	}};
 
-		player.x = player_pos.x;
-		player.y = player_pos.y;
+	while (!rl.WindowShouldClose()) {
+
+		var collision_rect: rl.Rectangle = player;
+		// movement
+		if (rl.IsKeyDown(rl.KEY_A))
+			collision_rect.x -= SPEED
+		else if (rl.IsKeyDown(rl.KEY_D))
+			collision_rect.x += SPEED
+		else if (rl.IsKeyDown(rl.KEY_W))
+			collision_rect.y -= SPEED
+		else if (rl.IsKeyDown(rl.KEY_S))
+			collision_rect.y += SPEED;
+
+		// Check for collisions
+		if (
+			for (level) |l| {
+				if (rl.CheckCollisionRecs(l, collision_rect))
+					break false;
+			} else true
+		) player = collision_rect;
+		player_pos.x = player.x - TILE / 2;
+		player_pos.y = player.y + TILE / 2;
 
 		camera.target = player_pos;
 
@@ -61,8 +78,9 @@ pub fn main() void {
 
 		rl.DrawRectangleRec(player, rl.RED);
 
-		// Reference rectangle
-		rl.DrawRectangle(TILE / 2, -TILE / 2, TILE, TILE, rl.RAYWHITE);
+		// draw level
+		for (level) |l|
+			rl.DrawRectangleRec(l, rl.RAYWHITE);
 	}
 }
 
