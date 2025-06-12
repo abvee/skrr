@@ -9,8 +9,8 @@ const rl = @cImport({
 const window_width = 1440;
 const window_height = 900;
 
-const TILE = 120;
-const SPEED = 0.5;
+const TILE = @import("constants.zig").TILE;
+const SPEED = 0.1;
 
 // all coordinates are in world space
 // center of the player rectangle
@@ -36,6 +36,8 @@ pub fn main() void {
 		.zoom = 1, // TODO: maybe change this for resolution resizing stuff ? 
 	};
 
+	// TODO:
+	// yes, level loading
 	const level = [_]rl.Rectangle{rl.Rectangle{
 		.x = TILE / 2,
 		.y = -TILE / 2,
@@ -86,4 +88,8 @@ pub fn main() void {
 
 test "hello world" {
 	std.debug.print("Hello world\n", .{});
+}
+
+test "raylib test" {
+	std.debug.print("x: {d:.0} y: {d:.0}  width: {d:.0} height: {d:.0}\n", player);
 }
