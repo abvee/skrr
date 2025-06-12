@@ -1,1 +1,1 @@
-const TILE = 80;
+pub const TILE = 80;
