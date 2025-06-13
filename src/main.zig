@@ -46,10 +46,18 @@ pub fn main() !void {
 		.zoom = 1, // TODO: maybe change this for resolution resizing stuff ? 
 	};
 
-	// TODO:
 	// yes, level loading
 	const lvl = try level.load(allocator, "levels/level1");
 	defer allocator.free(lvl);
+	// load player start position
+	{
+		const pos = try level.start_position("levels/level1");
+		player.x = pos.x;
+		player.y = pos.y;
+
+		player_pos.x = player.x + TILE / 2;
+		player_pos.y = player.y - TILE / 2;
+	}
 
 	while (!rl.WindowShouldClose()) {
 
@@ -71,8 +79,8 @@ pub fn main() !void {
 					break false;
 			} else true
 		) player = collision_rect;
-		player_pos.x = player.x - TILE / 2;
-		player_pos.y = player.y + TILE / 2;
+		player_pos.x = player.x + TILE / 2;
+		player_pos.y = player.y - TILE / 2;
 
 		camera.target = player_pos;
 
