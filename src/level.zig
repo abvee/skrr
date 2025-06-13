@@ -81,6 +81,10 @@ test "level loading" {
 }
 
 // return a start position for the player
+const StartPositionError = error {
+	NoStartPosition,
+};
+
 pub fn start_position(path: []const u8) !rl.Vector2 {
 	assert(offset != 0);
 	// the level file is very broken if offset is either 0 or getPos() from
@@ -88,7 +92,37 @@ pub fn start_position(path: []const u8) !rl.Vector2 {
 
 	const file = try std.fs.cwd().openFile(path, .{});
 	defer file.close();
+	const reader = file.reader();
 
 	// go to offset
-	file.seekTo(offset);
+	try file.seekTo(offset);
+
+	// read the singular for now starting position
+	var buf: [1024]u8 = [_]u8{0} ** 1024;
+	const line = reader.readUntilDelimiter(&buf, '\n')
+		catch |e| switch (e) {
+			error.EndOfStream => return StartPositionError.NoStartPosition,
+			else => return e,
+		};
+
+	// tokenize and load into rl.Vector2
+	var it = std.mem.tokenizeAny(u8, line, ",");
+	var ret: rl.Vector2 = undefined;
+	inline for (@typeInfo(rl.Vector2).@"struct".fields) |field| {
+		if (it.next()) |num| @field(ret, field.name) =
+			@floatFromInt((std.fmt.parseInt(u32, num, 10) catch 0) * TILE);
+			// we catch 0 because what could possibly go wrong ?
+	}
+	return ret;
+}
+
+test "start position testing" {
+	var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+	defer arena.deinit();
+	const allocator = arena.allocator();
+
+	// We basically assume load() doesn't fail.
+	_ = try load(allocator, "levels/level1");
+	const x = try start_position("levels/level1");
+	std.debug.print("{d:.0} {d:.0}\n", x);
 }
