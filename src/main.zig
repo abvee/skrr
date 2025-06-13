@@ -1,10 +1,10 @@
 const std = @import("std");
-
 const rl = @cImport({
 	@cInclude("raylib.h");
 	@cInclude("raymath.h");
 	@cInclude("rlgl.h");
 });
+const level = @import("level.zig");
 
 const window_width = 1440;
 const window_height = 900;
@@ -22,7 +22,17 @@ var player: rl.Rectangle = rl.Rectangle{
 	.height = TILE,
 };
 
-pub fn main() void {
+pub fn main() !void {
+	// General purpose allocator
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    defer {
+        const deinit_status = gpa.deinit();
+        //fail test; can't try in defer as defer is executed after we return
+        if (deinit_status == .leak) std.testing.expect(false)
+			catch @panic("TEST FAIL");
+    }
+
 	// This needs to be set for making the window tiling on sway
 	rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);
 
@@ -38,12 +48,8 @@ pub fn main() void {
 
 	// TODO:
 	// yes, level loading
-	const level = [_]rl.Rectangle{rl.Rectangle{
-		.x = TILE / 2,
-		.y = -TILE / 2,
-		.width = TILE,
-		.height = TILE,
-	}};
+	const lvl = try level.load(allocator, "levels/level1");
+	defer allocator.free(lvl);
 
 	while (!rl.WindowShouldClose()) {
 
@@ -60,7 +66,7 @@ pub fn main() void {
 
 		// Check for collisions
 		if (
-			for (level) |l| {
+			for (lvl) |l| {
 				if (rl.CheckCollisionRecs(l, collision_rect))
 					break false;
 			} else true
@@ -81,7 +87,7 @@ pub fn main() void {
 		rl.DrawRectangleRec(player, rl.RED);
 
 		// draw level
-		for (level) |l|
+		for (lvl) |l|
 			rl.DrawRectangleRec(l, rl.RAYWHITE);
 	}
 }

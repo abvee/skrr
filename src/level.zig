@@ -8,7 +8,9 @@ const rl = @cImport({
 const constants = @import("constants.zig");
 const TILE = constants.TILE;
 
-fn load(allocator: std.mem.Allocator, path: []const u8) ![]rl.Rectangle {
+// NOTE that the level files have coordinates in with 1 tile as 1 unit
+
+pub fn load(allocator: std.mem.Allocator, path: []const u8) ![]rl.Rectangle {
 	const file = try std.fs.cwd().openFile(path, .{});
 	const reader = file.reader();
 
@@ -31,9 +33,9 @@ fn load(allocator: std.mem.Allocator, path: []const u8) ![]rl.Rectangle {
 
 		// fill the struct with tokenized results
 		inline for (@typeInfo(rl.Rectangle).@"struct".fields) |field| {
-			if (it.next()) |num|
-				@field(bigboi[bigboi_index], field.name) =
-					@floatFromInt(std.fmt.parseInt(u32, num, 10) catch 0);
+
+			if (it.next()) |num| @field(bigboi[bigboi_index], field.name) =
+				@floatFromInt((std.fmt.parseInt(u32, num, 10) catch 0) * TILE);
 				// we catch 0 because what could possibly go wrong ?
 		}
 		bigboi_index += 1;
