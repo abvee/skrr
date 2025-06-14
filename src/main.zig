@@ -49,6 +49,7 @@ pub fn main() !void {
 	// yes, level loading
 	const lvl = try level.load(allocator, "levels/level1");
 	defer allocator.free(lvl);
+
 	// load player start position
 	player_pos = try level.start_position("levels/level1");
 	player.x = player_pos.x - TILE / 2;
