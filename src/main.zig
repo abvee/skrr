@@ -20,7 +20,7 @@ var player: rl.Rectangle = rl.Rectangle{
 	.y = 0 - TILE / 2,
 	.width = TILE,
 	.height = TILE,
-};
+}; // the player rectangle
 
 pub fn main() !void {
 	// General purpose allocator
@@ -30,7 +30,7 @@ pub fn main() !void {
         const deinit_status = gpa.deinit();
         //fail test; can't try in defer as defer is executed after we return
         if (deinit_status == .leak) std.testing.expect(false)
-			catch @panic("TEST FAIL");
+			catch @panic("Memory leak");
     }
 
 	// This needs to be set for making the window tiling on sway
@@ -50,14 +50,9 @@ pub fn main() !void {
 	const lvl = try level.load(allocator, "levels/level1");
 	defer allocator.free(lvl);
 	// load player start position
-	{
-		const pos = try level.start_position("levels/level1");
-		player.x = pos.x;
-		player.y = pos.y;
-
-		player_pos.x = player.x + TILE / 2;
-		player_pos.y = player.y - TILE / 2;
-	}
+	player_pos = try level.start_position("levels/level1");
+	player.x = player_pos.x - TILE / 2;
+	player.y = player_pos.y - TILE / 2;
 
 	while (!rl.WindowShouldClose()) {
 

@@ -54,10 +54,14 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) ![]rl.Rectangle {
 				@floatFromInt((std.fmt.parseInt(u32, num, 10) catch 0) * TILE);
 				// we catch 0 because what could possibly go wrong ?
 		}
+
+		// set rectangle positions correctly as the level file contains the
+		// center of the tile, not the top right corner
+		bigboi[bigboi_index].x -= TILE / 2;
+		bigboi[bigboi_index].y -= TILE / 2;
+
 		bigboi_index += 1;
-
 	}
-
 
 	const ret = try allocator.alloc(rl.Rectangle, bigboi_index);
 	std.mem.copyForwards(rl.Rectangle, ret, bigboi[0..bigboi_index]);
@@ -97,7 +101,7 @@ pub fn start_position(path: []const u8) !rl.Vector2 {
 	// go to offset
 	try file.seekTo(offset);
 
-	// read the singular for now starting position
+	// read the singular (for now) starting position
 	var buf: [1024]u8 = [_]u8{0} ** 1024;
 	const line = reader.readUntilDelimiter(&buf, '\n')
 		catch |e| switch (e) {
