@@ -23,7 +23,7 @@ pub fn init() !void {
 	// TODO: don't hardcode the server's address.
 	try posix.connect(
 		sock,
-		&addr,
+		&addr.any,
 		addr.getOsSockLen(),
 	);
 
