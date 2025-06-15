@@ -5,6 +5,7 @@ const rl = @cImport({
 	@cInclude("rlgl.h");
 });
 const level = @import("level.zig");
+const network = @import("network.zig");
 
 const window_width = 1440;
 const window_height = 900;
@@ -38,6 +39,10 @@ pub fn main() !void {
 
 	rl.InitWindow(window_width, window_height, "skrr");
 	defer rl.CloseWindow();
+
+	// connect to server
+	try network.init();
+	defer network.deinit();
 
 	var camera: rl.Camera2D = rl.Camera2D{
 		.target = player_pos,
