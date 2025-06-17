@@ -105,4 +105,17 @@ pub fn build(b: *std.Build) void {
 	// run step
     const server_run_step = b.step("serve", "Start the server");
     server_run_step.dependOn(&server_run.step);
+
+	// server testing
+	server_test(b, server_mod);
+}
+
+// all testing related to the server
+inline fn server_test(b: *std.Build, server_mod: *std.Build.Module) void {
+    const exe_unit_tests = b.addTest(.{
+        .root_module = server_mod,
+    });
+    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+	const test_step = b.step("servetest", "Run all server unit tests");
+    test_step.dependOn(&run_exe_unit_tests.step);
 }

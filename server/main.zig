@@ -33,3 +33,7 @@ pub fn main() !void {
 
 	std.debug.print("{s}\n", .{buf[0..n]});
 }
+
+test "Hello world" {
+	std.debug.print("Hello world\n", .{});
+}
