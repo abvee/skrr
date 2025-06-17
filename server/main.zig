@@ -2,14 +2,20 @@ const std = @import("std");
 const net = std.net;
 const posix = std.posix;
 
+const ops = enum(u16) {
+	DEFAULT,
+	HELLO = 0xff,
+};
+
 const addr = net.Address.initIp4(
 	[4]u8{127,0,0,1},
 	12271
 );
+var sock: posix.socket_t = undefined;
 
 pub fn main() !void {
 	// create socket and bind
-	const sock = try posix.socket(
+	sock = try posix.socket(
 		posix.AF.INET,
 		posix.SOCK.DGRAM,
 		posix.IPPROTO.UDP,
@@ -21,17 +27,28 @@ pub fn main() !void {
 		addr.getOsSockLen()
 	);
 
-	// for now, accept a client and print what they send you
+	// this buffer holds all our data
 	var buf: [1024]u8 = [_]u8{0} ** 1024;
-	const n = try posix.recvfrom(
-		sock,
-		&buf,
-		0, // flags
-		null, // client addr destination
-		null, // client addr length
-	);
+	var pkt: []u8 = undefined; // the packet
 
-	std.debug.print("{s}\n", .{buf[0..n]});
+	_ = hot: switch (ops.DEFAULT) {
+		.DEFAULT => {
+			const n = try posix.recvfrom(
+				sock,
+				&buf,
+				0, // flags
+				null, // client addr destination
+				null, // client addr length
+			);
+			pkt = buf[0..n]; // fill packet
+			std.debug.print("{s}\n", .{pkt}); // print
+			break :hot ops.DEFAULT;
+		},
+		.HELLO => {
+			// TODO: fill this
+			break :hot ops.DEFAULT;
+		},
+	};
 }
 
 test "Hello world" {
