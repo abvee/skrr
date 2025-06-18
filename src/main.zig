@@ -49,6 +49,13 @@ pub fn main() !void {
 	try network.init();
 	defer network.deinit();
 
+	// get player position data and your id
+	// only run when you newly join a server
+	network.new_join(&others) catch {};
+	// TODO: make level loading also done with this ?
+	// TODO: handle errors. It's fine to ignore them as others just becomes
+	// null for now, but we shouldn't.
+
 	var camera: rl.Camera2D = rl.Camera2D{
 		.target = player_pos,
 		.offset = rl.Vector2{.x = window_width/2, .y = window_height/2},
