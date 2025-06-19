@@ -49,10 +49,10 @@ const PlayerError = error {
 
 pub fn new_join(others: []?rl.Vector2) !void {
 	// send the hello packet
-	hello();
+	try hello();
 
 	// get hello packet back
-	var buf: [1024]u8 = [1024]u8{0} ** 1024;
+	var buf: [1024]u8 = [_]u8{0} ** 1024;
 	const n = try server.read(&buf);
 
 	// we should get the first byte as the op for hello
