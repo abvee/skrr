@@ -23,6 +23,11 @@ var player: rl.Rectangle = rl.Rectangle{
 	.height = TILE,
 }; // the player rectangle
 
+// other player positions
+var others: [8]?rl.Vector2 = .{null} ** 8;
+var others_rec: [8]rl.Rectangle = undefined;
+// this ^ might be unnecessary
+
 pub fn main() !void {
 	// General purpose allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -43,6 +48,13 @@ pub fn main() !void {
 	// connect to server
 	try network.init();
 	defer network.deinit();
+
+	// get player position data and your id
+	// only run when you newly join a server
+	network.new_join(&others) catch {};
+	// TODO: make level loading also done with this ?
+	// TODO: handle errors. It's fine to ignore them as others just becomes
+	// null for now, but we shouldn't.
 
 	var camera: rl.Camera2D = rl.Camera2D{
 		.target = player_pos,
@@ -98,6 +110,9 @@ pub fn main() !void {
 		// draw level
 		for (lvl) |l|
 			rl.DrawRectangleRec(l, rl.RAYWHITE);
+
+		// draw other players
+		draw_others();
 	}
 }
 
@@ -107,4 +122,12 @@ test "hello world" {
 
 test "raylib test" {
 	std.debug.print("x: {d:.0} y: {d:.0}  width: {d:.0} height: {d:.0}\n", player);
+}
+
+// should be called inside raylib BeginMode2D
+inline fn draw_others() void {
+	for (others,0..) |o,i| {
+		if (o) |_|
+			rl.DrawRectangleRec(others_rec[i], rl.SKYBLUE);
+	}
 }

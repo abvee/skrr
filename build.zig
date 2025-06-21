@@ -62,7 +62,7 @@ pub fn build(b: *std.Build) void {
     });
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
-	// level testing only
+	// level testing
 	const level_tests = b.addTest(.{
 		.root_module = b.createModule(.{
 			.root_source_file = b.path("src/level.zig"),
@@ -75,10 +75,61 @@ pub fn build(b: *std.Build) void {
 	level_tests.linkLibC();
 	const run_level_unit_tests = b.addRunArtifact(level_tests);
 
+	// network testing
+	const network_tests = b.addTest(.{
+		.root_module = b.createModule(.{
+			.root_source_file = b.path("src/network.zig"),
+			.target = target,
+			.optimize = optimize,
+		}),
+	});
+	network_tests.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
+	network_tests.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
+	network_tests.linkLibC();
+	const run_network_unit_tests = b.addRunArtifact(network_tests);
+
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request
     // running the unit tests.
     const test_step = b.step("test", "Run all unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
     test_step.dependOn(&run_level_unit_tests.step);
+    test_step.dependOn(&run_network_unit_tests.step);
+
+	// -- SERVER STUFF BEYOND THIS POINT --
+    const server_mod = b.createModule(.{
+        .root_source_file = b.path("server/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const server_exe = b.addExecutable(.{
+        .name = "skrr-server",
+        .root_module = server_mod,
+    });
+	b.installArtifact(server_exe);
+	// server run step
+	const server_run = b.addRunArtifact(server_exe);
+    server_run.step.dependOn(b.getInstallStep());
+
+	// argument passing
+    if (b.args) |args| {
+        server_run.addArgs(args);
+    }
+
+	// run step
+    const server_run_step = b.step("serve", "Start the server");
+    server_run_step.dependOn(&server_run.step);
+
+	// server testing
+	server_test(b, server_mod);
+}
+
+// all testing related to the server
+inline fn server_test(b: *std.Build, server_mod: *std.Build.Module) void {
+    const exe_unit_tests = b.addTest(.{
+        .root_module = server_mod,
+    });
+    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+	const test_step = b.step("servetest", "Run all server unit tests");
+    test_step.dependOn(&run_exe_unit_tests.step);
 }
