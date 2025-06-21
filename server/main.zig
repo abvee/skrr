@@ -91,9 +91,8 @@ pub fn main() !void {
 			const i = hello(client) catch continue :hot ops.DEFAULT;
 			// TODO: do something if we fail to send the hello packet
 
-			// set the id
+			// set the client id
 			conns[i] = client;
-
 			continue :hot ops.DEFAULT;
 		},
 	}
@@ -106,6 +105,7 @@ test "Hello world" {
 // send the client his hello packet
 // return id
 inline fn hello(client: net.Address) !u8 {
+
 	var hello_pkt: [1024]u8 = [_]u8{0} ** 1024;
 	hello_pkt[0] = @intCast(@intFromEnum(ops.HELLO)); // the op code
 
@@ -122,11 +122,10 @@ inline fn hello(client: net.Address) !u8 {
 				hello_pkt[hello_pkt_index + 1..hello_pkt_index + @sizeOf(pdata) + 1],
 				std.mem.asBytes(&players[i]),
 			);
+			hello_pkt_index += 1 + @sizeOf(pdata);
 		}
 		else id = @intCast(i);
 		// get the last free id ^
-
-		hello_pkt_index += 1 + @sizeOf(pdata);
 	}
 
 	hello_pkt[1] = id; // player id
@@ -135,9 +134,19 @@ inline fn hello(client: net.Address) !u8 {
 		sock,
 		hello_pkt[0..hello_pkt_index],
 		0,
-		&client.any, // will fill
+		&client.any,
 		client.getOsSockLen(),
 	);
 
 	return id;
+}
+
+test "hello packet" {
+	const client = net.Address.initIp4(
+		[4]u8{127,0,0,1},
+		12271,
+	);
+
+	const id = try hello(client);
+	std.debug.print("{}\n", .{id});
 }
