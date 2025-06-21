@@ -96,7 +96,11 @@ pub inline fn disconnect() void {
 	// ideally, this cannot fail....
 	// Even if it does, a server timeout should take the player out of
 	// comission
-	_ = server.write(&[1]u8{@intFromEnum(ops.DISCONNECT)})
+	const pkt: [2]u8 = [_]u8{
+		@intFromEnum(ops.DISCONNECT),
+		id,
+	};
+	_ = server.write(&pkt)
 		catch {};
 }
 
