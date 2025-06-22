@@ -25,7 +25,12 @@ var player: rl.Rectangle = rl.Rectangle{
 
 // other player positions
 var others: [8]?rl.Vector2 = .{null} ** 8;
-var others_rec: [8]rl.Rectangle = undefined;
+var others_rec: [8]rl.Rectangle = [_]rl.Rectangle{
+	rl.Rectangle{
+		.width = TILE,
+		.height = TILE,
+	},
+} ** 8;
 // this ^ might be unnecessary
 
 pub fn main() !void {
@@ -34,7 +39,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer {
         const deinit_status = gpa.deinit();
-        //fail test; can't try in defer as defer is executed after we return
+        // can't try in defer as defer is executed after we return
         if (deinit_status == .leak) std.testing.expect(false)
 			catch @panic("Memory leak");
     }
@@ -52,6 +57,7 @@ pub fn main() !void {
 	// get player position data and your id
 	// only run when you newly join a server
 	network.new_join(&others) catch {};
+	defer network.disconnect();
 	// TODO: make level loading also done with this ?
 	// TODO: handle errors. It's fine to ignore them as others just becomes
 	// null for now, but we shouldn't.
@@ -71,6 +77,9 @@ pub fn main() !void {
 	player_pos = try level.start_position("levels/level1");
 	player.x = player_pos.x - TILE / 2;
 	player.y = player_pos.y - TILE / 2;
+
+	// start the physics thread
+	_ = try std.Thread.spawn(.{}, physics, .{});
 
 	while (!rl.WindowShouldClose()) {
 
@@ -124,10 +133,30 @@ test "raylib test" {
 	std.debug.print("x: {d:.0} y: {d:.0}  width: {d:.0} height: {d:.0}\n", player);
 }
 
+// While the function is called physics, it refers to anything that needs a
+// fixed timing
+fn physics() void {
+	while (true) {
+		std.time.sleep(std.time.ns_per_s * 0.5);
+
+		network.send_pos(player_pos)
+			catch {};
+	}
+}
+
+
 // should be called inside raylib BeginMode2D
 inline fn draw_others() void {
 	for (others,0..) |o,i| {
-		if (o) |_|
+		if (o) |_| {
+
+			// update the rectangle position. we can do this just before
+			// drawing, it's fine. I'm not sure I'll keep others_rec around
+			// anyways. The source of truth is always others: []?rl.Vector2
+			others_rec[i].x = o.?.x - TILE / 2;
+			others_rec[i].y = o.?.y - TILE / 2;
+
 			rl.DrawRectangleRec(others_rec[i], rl.SKYBLUE);
+		}
 	}
 }

@@ -6,6 +6,7 @@ const assert = std.debug.assert;
 const ops = enum(u16) {
 	DEFAULT = 0x100, // Should be unreachable
 	HELLO = 0xff,
+	DISCONNECT = 0x11,
 
 	// check if the integer is a valid enum
 	// Return the enum
@@ -95,6 +96,19 @@ pub fn main() !void {
 			conns[i] = client;
 			continue :hot ops.DEFAULT;
 		},
+		.DISCONNECT => {
+			assert(pkt[0] == @intFromEnum(ops.DISCONNECT));
+			assert(pkt.len >= 2);
+
+			// Close connection
+			const id = pkt[1];
+			conns[id] = null;
+
+			// TODO: do some handshake to make sure any client cannot close any
+			// other client, either maliciously or by mistake
+			std.debug.print("Disconnected player w/ id: {}\n", .{id});
+			continue :hot ops.DEFAULT;
+		}
 	}
 }
 
