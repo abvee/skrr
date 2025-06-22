@@ -78,6 +78,9 @@ pub fn main() !void {
 	player.x = player_pos.x - TILE / 2;
 	player.y = player_pos.y - TILE / 2;
 
+	// start the physics thread
+	_ = try std.Thread.spawn(.{}, physics, .{});
+
 	while (!rl.WindowShouldClose()) {
 
 		var collision_rect: rl.Rectangle = player;
@@ -129,6 +132,18 @@ test "hello world" {
 test "raylib test" {
 	std.debug.print("x: {d:.0} y: {d:.0}  width: {d:.0} height: {d:.0}\n", player);
 }
+
+// While the function is called physics, it refers to anything that needs a
+// fixed timing
+fn physics() void {
+	while (true) {
+		std.time.sleep(std.time.ns_per_s * 0.5);
+
+		network.send_pos(player_pos)
+			catch {};
+	}
+}
+
 
 // should be called inside raylib BeginMode2D
 inline fn draw_others() void {

@@ -18,6 +18,7 @@ var id: u8 = undefined; // the id the server assigns us
 const ops = enum(u8) {
 	HELLO = 0xff,
 	DISCONNECT = 0x11,
+	POSITION = 0x00,
 };
 
 // start the socket
@@ -115,4 +116,20 @@ test "new join" {
 	for (others, 0..) |o, i|
 		if (o) |_|
 			std.debug.print("id: {} x: {} y: {}\n", .{i, o.?.x, o.?.y});
+}
+
+// send our player's position
+pub fn send_pos(position: rl.Vector2) !void {
+	var pkt: [2 + @sizeOf(rl.Vector2)]u8 =
+		[_]u8{0} ** (2 + @sizeOf(rl.Vector2));
+
+	pkt[0] = @intFromEnum(ops.POSITION);
+	pkt[1] = id;  // player's id
+
+	std.mem.copyForwards(
+		u8,
+		pkt[2..],
+		std.mem.asBytes(&position),
+	);
+	_ = try server.write(&pkt);
 }
