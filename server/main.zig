@@ -68,6 +68,8 @@ pub fn main() !void {
 	var client: net.Address = undefined;
 	var client_len: posix.socklen_t = @sizeOf(net.Address);
 
+	_ = try std.Thread.spawn(.{}, pdata_sender, .{});
+
 	hot: switch (ops.DEFAULT) {
 		.DEFAULT => {
 			const n = try posix.recvfrom(
@@ -149,6 +151,30 @@ pub fn main() !void {
 
 test "Hello world" {
 	std.debug.print("Hello world\n", .{});
+}
+
+fn pdata_sender() !void {
+	var pkt: [2 + @sizeOf(pdata)]u8 =
+		[_]u8{0} ** (2 + @sizeOf(pdata));
+
+	while (true) {
+		std.time.sleep(std.time.ns_per_s);
+
+		for (conns, 0..) |conn, i|
+			if (conn) |_| {
+				// This is bad code. We are relying on a number of things here
+				// that might not be true always.
+				pkt[0] = @intFromEnum(ops.POS);
+				pkt[1] = @intCast(i);
+				std.mem.copyForwards(
+					u8,
+					pkt[2..],
+					std.mem.asBytes(&players[i]),
+				);
+				broadcast(@intCast(i), &pkt)
+					catch {};
+			};
+	}
 }
 
 // send the client his hello packet
