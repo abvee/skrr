@@ -101,8 +101,15 @@ pub fn main() !void {
 			assert(pkt[0] == @intFromEnum(ops.DISCONNECT));
 			assert(pkt.len >= 2);
 
-			// Close connection
 			const id = pkt[1];
+
+			// before we close the connection, we should broadcast to everyone
+			// that the client has disconnected
+			const disconnect_pkt: [2]u8 = [_]u8{
+				@intFromEnum(ops.DISCONNECT),
+				id,
+			};
+			broadcast(id, disconnect_pkt);
 			conns[id] = null;
 
 			// TODO: do some handshake to make sure any client cannot close any
@@ -188,4 +195,20 @@ test "hello packet" {
 
 	const id = try hello(client);
 	std.debug.print("{}\n", .{id});
+}
+
+// broadcast packet to everyone except conns_id
+inline fn broadcast(conns_id: u8, pkt: []u8) void {
+	for (conns, 0..) |conn, i| {
+		if (i == conns_id) continue;
+
+		if (conn) |c|
+			_ = posix.sendto(
+				sock,
+				&pkt,
+				0,
+				&c.any,
+				c.getOsSockLen(),
+			);
+	}
 }
