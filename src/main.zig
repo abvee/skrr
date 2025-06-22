@@ -78,8 +78,9 @@ pub fn main() !void {
 	player.x = player_pos.x - TILE / 2;
 	player.y = player_pos.y - TILE / 2;
 
-	// start the physics thread
+	// start the threads
 	_ = try std.Thread.spawn(.{}, physics, .{});
+	_ = try std.Thread.spawn(.{}, reciever, .{});
 
 	while (!rl.WindowShouldClose()) {
 
@@ -144,8 +145,27 @@ fn physics() void {
 	}
 }
 
+// the network reciever thread.
+// I'm putting it here. Yes, I know I'm exposing network.ops. No, I don't care
+fn reciever() void {
+	var buf: [1024]u8 = [_]u8{0} ** 1024;
+	var pkt: []u8 = undefined;
+
+	pkt = network.recv_pkt(&buf);
+
+	while (true) : (
+		pkt = network.recv_pkt(&buf)
+	) switch (network.ops.valid(pkt[0])) {
+		network.ops.DISCONNECT => {
+			others[pkt[1]] = null;
+		},
+		else => {},
+	};
+}
+
 
 // should be called inside raylib BeginMode2D
+// TODO: assert we are inside raylib BeginMode2D
 inline fn draw_others() void {
 	for (others,0..) |o,i| {
 		if (o) |_| {

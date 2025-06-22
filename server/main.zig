@@ -109,7 +109,10 @@ pub fn main() !void {
 				@intFromEnum(ops.DISCONNECT),
 				id,
 			};
-			broadcast(id, disconnect_pkt);
+			broadcast(id, &disconnect_pkt)
+				catch {};
+			// TODO: do something when broadcasting fails.
+
 			conns[id] = null;
 
 			// TODO: do some handshake to make sure any client cannot close any
@@ -198,14 +201,14 @@ test "hello packet" {
 }
 
 // broadcast packet to everyone except conns_id
-inline fn broadcast(conns_id: u8, pkt: []u8) void {
+inline fn broadcast(conns_id: u8, pkt: []const u8) !void {
 	for (conns, 0..) |conn, i| {
 		if (i == conns_id) continue;
 
 		if (conn) |c|
-			_ = posix.sendto(
+			_ = try posix.sendto(
 				sock,
-				&pkt,
+				pkt,
 				0,
 				&c.any,
 				c.getOsSockLen(),

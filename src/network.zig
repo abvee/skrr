@@ -15,10 +15,21 @@ const addr = net.Address.initIp4(
 var server: std.fs.File = undefined;
 var id: u8 = undefined; // the id the server assigns us
 
-const ops = enum(u8) {
+pub const ops = enum(u8) {
+	NULL = 0x01, // this is just to make the valid function work
 	HELLO = 0xff,
 	DISCONNECT = 0x11,
 	POSITION = 0x00,
+
+	// return the enum
+	pub fn valid(in: @typeInfo(@This()).@"enum".tag_type) @This() {
+		// loop through the enum and check if the integer is part of it
+		inline for (@typeInfo(@This()).@"enum".fields) |field| {
+			if (in == @intFromEnum(@field(@This(), field.name)))
+				return @enumFromInt(in);
+		}
+		return @field(@This(), @typeInfo(@This()).@"enum".fields[0].name);
+	}
 };
 
 // start the socket
@@ -131,4 +142,9 @@ pub fn send_pos(position: rl.Vector2) !void {
 		std.mem.asBytes(&position),
 	);
 	_ = try server.write(&pkt);
+}
+
+pub inline fn recv_pkt(buf: []u8) []u8 {
+	return buf[0..server.read(buf) catch 1];
+	// TODO: do something about this ^
 }
