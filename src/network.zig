@@ -79,7 +79,6 @@ pub fn new_join(others: []?rl.Vector2) !void {
 				rl.Vector2,
 				buf[i + 1..i + @sizeOf(rl.Vector2) + 1]
 			);
-			// std.debug.print("{} {}\n", others[other_id].?);
 		}
 		else return PlayerError.PlayerAlreadyConnected;
 	}

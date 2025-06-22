@@ -78,6 +78,8 @@ pub fn main() !void {
 	player.x = player_pos.x - TILE / 2;
 	player.y = player_pos.y - TILE / 2;
 
+	std.debug.print("{d:.2} {d:.2}\n", player_pos);
+
 	// start the physics thread
 	_ = try std.Thread.spawn(.{}, physics, .{});
 
@@ -102,7 +104,7 @@ pub fn main() !void {
 			} else true
 		) player = collision_rect;
 		player_pos.x = player.x + TILE / 2;
-		player_pos.y = player.y - TILE / 2;
+		player_pos.y = player.y + TILE / 2;
 
 		camera.target = player_pos;
 

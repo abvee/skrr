@@ -7,6 +7,7 @@ const ops = enum(u16) {
 	DEFAULT = 0x100, // Should be unreachable
 	HELLO = 0xff,
 	DISCONNECT = 0x11,
+	POS = 0x00,
 
 	// check if the integer is a valid enum
 	// Return the enum
@@ -108,7 +109,31 @@ pub fn main() !void {
 			// other client, either maliciously or by mistake
 			std.debug.print("Disconnected player w/ id: {}\n", .{id});
 			continue :hot ops.DEFAULT;
-		}
+		},
+		.POS => {
+			assert(pkt[0] == @intFromEnum(ops.POS));
+			const id = pkt[1];
+
+			// verify that the client has the same id
+			if (conns[id] == null)
+				continue :hot ops.DEFAULT
+			else if (!conns[id].?.eql(client))
+				continue :hot ops.DEFAULT;
+			// TODO: someone might be intentionally trying to change another's
+			// position. Anticheat will come later
+
+			// Update the positions
+			players[id] = std.mem.bytesToValue(
+				pdata,
+				pkt[2..],
+			);
+
+			std.debug.print("Updated position for id {}: x: {d:.2} y: {d:.2}\n", .{
+				id, players[id].x, players[id].y
+			});
+
+			continue :hot ops.DEFAULT;
+		},
 	}
 }
 
