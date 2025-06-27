@@ -159,6 +159,21 @@ fn reciever() void {
 		network.ops.DISCONNECT => {
 			others[pkt[1]] = null;
 		},
+		network.ops.POSITION => {
+			// update the position of all known clients
+			var i: usize = 1;
+			while (i < pkt.len) : (i += @sizeOf(rl.Vector2) + 1) {
+				const id = pkt[i];
+
+				// see if not null
+				if (others[id]) |_| {
+					others[id] = std.mem.bytesToValue(
+						rl.Vector2,
+						pkt[i+1..i+@sizeOf(rl.Vector2)+1],
+					);
+				}
+			}
+		},
 		else => {},
 	};
 }

@@ -158,7 +158,10 @@ fn pdata_sender() !void {
 		[_]u8{0} ** (2 + @sizeOf(pdata));
 
 	while (true) {
-		std.time.sleep(std.time.ns_per_s);
+		std.time.sleep(std.time.ns_per_s * 0.1);
+
+		// TODO: We are currently sending each player's position, one at a time.
+		// Look into maybe sending all the positions at once to each player
 
 		for (conns, 0..) |conn, i|
 			if (conn) |_| {
