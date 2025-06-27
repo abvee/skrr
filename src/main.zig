@@ -138,7 +138,7 @@ test "raylib test" {
 // fixed timing
 fn physics() void {
 	while (true) {
-		std.time.sleep(std.time.ns_per_s * 0.5);
+		std.time.sleep(std.time.ns_per_s * 0.1);
 
 		network.send_pos(player_pos)
 			catch {};
