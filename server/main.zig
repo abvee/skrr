@@ -2,6 +2,7 @@ const std = @import("std");
 const net = std.net;
 const posix = std.posix;
 const assert = std.debug.assert;
+const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
 
 const ops = enum(u16) {
 	DEFAULT = 0x100, // Should be unreachable
@@ -42,8 +43,8 @@ const pdata = struct {
 	y: f32,
 };
 
-var conns: [8]?net.Address = .{null} ** 8;
-var players: [8]pdata = undefined;
+var conns: [NUM_PLAYERS]?net.Address = .{null} ** NUM_PLAYERS;
+var players: [NUM_PLAYERS]pdata = undefined;
 
 pub fn main() !void {
 	// create socket and bind

@@ -8,6 +8,8 @@ const rl = @cImport({
 	@cInclude("rlgl.h");
 });
 
+const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
+
 const addr = net.Address.initIp4(
 	[4]u8{127,0,0,1},
 	12271,
@@ -75,7 +77,7 @@ pub fn new_join(others: []?rl.Vector2) !void {
 	assert(buf[0] == @intFromEnum(ops.HELLO));
 
 	// load your id
-	assert(buf[1] < 8); // make sure we don't get an id that's out of bounds
+	assert(buf[1] < NUM_PLAYERS); // make sure we don't get an id that's out of bounds
 	id = buf[1];
 
 
@@ -119,7 +121,7 @@ test "new join" {
 	try init();
 	defer deinit();
 
-	var others: [8]?rl.Vector2 = .{null} ** 8;
+	var others: [NUM_PLAYERS]?rl.Vector2 = .{null} ** NUM_PLAYERS;
 	try new_join(&others);
 
 	std.debug.print("{}\n", .{id});

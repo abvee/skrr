@@ -11,6 +11,7 @@ const window_width = 1440;
 const window_height = 900;
 
 const TILE = @import("constants.zig").TILE;
+const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
 const SPEED = 0.1;
 
 // all coordinates are in world space
@@ -24,13 +25,13 @@ var player: rl.Rectangle = rl.Rectangle{
 }; // the player rectangle
 
 // other player positions
-var others: [8]?rl.Vector2 = .{null} ** 8;
-var others_rec: [8]rl.Rectangle = [_]rl.Rectangle{
+var others: [NUM_PLAYERS]?rl.Vector2 = .{null} ** NUM_PLAYERS;
+var others_rec: [NUM_PLAYERS]rl.Rectangle = [_]rl.Rectangle{
 	rl.Rectangle{
 		.width = TILE,
 		.height = TILE,
 	},
-} ** 8;
+} ** NUM_PLAYERS;
 // this ^ might be unnecessary
 
 pub fn main() !void {
