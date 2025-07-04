@@ -2,6 +2,7 @@ const std = @import("std");
 const net = std.net;
 const posix = std.posix;
 const assert = std.debug.assert;
+const tcp = @import("tcp.zig");
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
 
 const ops = enum(u16) {
@@ -47,108 +48,104 @@ var conns: [NUM_PLAYERS]?net.Address = .{null} ** NUM_PLAYERS;
 var players: [NUM_PLAYERS]pdata = undefined;
 
 pub fn main() !void {
-   // create socket and bind
-   sock = try posix.socket(
-      posix.AF.INET,
-      posix.SOCK.DGRAM,
-      posix.IPPROTO.UDP,
-   );
-   defer posix.close(sock);
-   errdefer posix.close(sock);
-
-   try posix.bind(
-      sock,
-      &addr.any,
-      addr.getOsSockLen()
-   );
-
-   // this buffer holds all our data
-   var buf: [1024]u8 = [_]u8{0} ** 1024;
-   var pkt: []u8 = undefined; // the packet
-
-   var client: net.Address = undefined;
-   var client_len: posix.socklen_t = @sizeOf(net.Address);
-
-   _ = try std.Thread.spawn(.{}, pdata_sender, .{});
-
-   hot: switch (ops.DEFAULT) {
-      .DEFAULT => {
-         const n = try posix.recvfrom(
-            sock,
-            &buf,
-            0, // flags
-            &client.any, // client addr destination
-            &client_len, // client addr length
-         );
-
-         pkt = buf[0..n]; // fill packet
-
-         std.debug.print("Recieved packet: {x}\n", .{pkt});
-
-         // valid() will return the enum in pkt[0] if it's valid, otherwise
-         // it'll return DEFAULT
-         continue :hot ops.valid(pkt[0]);
-      },
-      .HELLO => {
-         // TODO: assert to make sure the client exists before assigning
-
-         // construct and send the hello packet
-         const i = hello(client) catch continue :hot ops.DEFAULT;
-         // TODO: do something if we fail to send the hello packet
-
-         // set the client id
-         conns[i] = client;
-         continue :hot ops.DEFAULT;
-      },
-      .DISCONNECT => {
-         assert(pkt[0] == @intFromEnum(ops.DISCONNECT));
-         assert(pkt.len >= 2);
-
-         const id = pkt[1];
-
-         // before we close the connection, we should broadcast to everyone
-         // that the client has disconnected
-         const disconnect_pkt: [2]u8 = [_]u8{
-            @intFromEnum(ops.DISCONNECT),
-            id,
-         };
-         broadcast(id, &disconnect_pkt)
-            catch {};
-         // TODO: do something when broadcasting fails.
-
-         conns[id] = null;
-
-         // TODO: do some handshake to make sure any client cannot close any
-         // other client, either maliciously or by mistake
-         std.debug.print("Disconnected player w/ id: {}\n", .{id});
-         continue :hot ops.DEFAULT;
-      },
-      .POS => {
-         assert(pkt[0] == @intFromEnum(ops.POS));
-         const id = pkt[1];
-
-         // verify that the client has the same id
-         if (conns[id] == null)
-            continue :hot ops.DEFAULT
-         else if (!conns[id].?.eql(client))
-            continue :hot ops.DEFAULT;
-         // TODO: someone might be intentionally trying to change another's
-         // position. Anticheat will come later
-
-         // Update the positions
-         players[id] = std.mem.bytesToValue(
-            pdata,
-            pkt[2..],
-         );
-
-         std.debug.print("Updated position for id {}: x: {d:.2} y: {d:.2}\n", .{
-            id, players[id].x, players[id].y
-         });
-
-         continue :hot ops.DEFAULT;
-      },
-   }
+   // initialize
+   try tcp.init();
+   defer tcp.deinit();
+   
+   // start tcp acceptor thread
+   _ = try std.Thread.spawn(.{}, acceptor, .{});
+   while (true) {}
 }
+
+// pub fn main() !void {
+
+//    // this buffer holds all our data
+//    var buf: [1024]u8 = [_]u8{0} ** 1024;
+//    var pkt: []u8 = undefined; // the packet
+// 
+//    var client: net.Address = undefined;
+//    var client_len: posix.socklen_t = @sizeOf(net.Address);
+// 
+//    _ = try std.Thread.spawn(.{}, pdata_sender, .{});
+// 
+//    hot: switch (ops.DEFAULT) {
+//       .DEFAULT => {
+//          const n = try posix.recvfrom(
+//             sock,
+//             &buf,
+//             0, // flags
+//             &client.any, // client addr destination
+//             &client_len, // client addr length
+//          );
+// 
+//          pkt = buf[0..n]; // fill packet
+// 
+//          std.debug.print("Recieved packet: {x}\n", .{pkt});
+// 
+//          // valid() will return the enum in pkt[0] if it's valid, otherwise
+//          // it'll return DEFAULT
+//          continue :hot ops.valid(pkt[0]);
+//       },
+//       .HELLO => {
+//          // TODO: assert to make sure the client exists before assigning
+// 
+//          // construct and send the hello packet
+//          const i = hello(client) catch continue :hot ops.DEFAULT;
+//          // TODO: do something if we fail to send the hello packet
+// 
+//          // set the client id
+//          conns[i] = client;
+//          continue :hot ops.DEFAULT;
+//       },
+//       .DISCONNECT => {
+//          assert(pkt[0] == @intFromEnum(ops.DISCONNECT));
+//          assert(pkt.len >= 2);
+// 
+//          const id = pkt[1];
+// 
+//          // before we close the connection, we should broadcast to everyone
+//          // that the client has disconnected
+//          const disconnect_pkt: [2]u8 = [_]u8{
+//             @intFromEnum(ops.DISCONNECT),
+//             id,
+//          };
+//          broadcast(id, &disconnect_pkt)
+//             catch {};
+//          // TODO: do something when broadcasting fails.
+// 
+//          conns[id] = null;
+// 
+//          // TODO: do some handshake to make sure any client cannot close any
+//          // other client, either maliciously or by mistake
+//          std.debug.print("Disconnected player w/ id: {}\n", .{id});
+//          continue :hot ops.DEFAULT;
+//       },
+//       .POS => {
+//          assert(pkt[0] == @intFromEnum(ops.POS));
+//          const id = pkt[1];
+// 
+//          // verify that the client has the same id
+//          if (conns[id] == null)
+//             continue :hot ops.DEFAULT
+//          else if (!conns[id].?.eql(client))
+//             continue :hot ops.DEFAULT;
+//          // TODO: someone might be intentionally trying to change another's
+//          // position. Anticheat will come later
+// 
+//          // Update the positions
+//          players[id] = std.mem.bytesToValue(
+//             pdata,
+//             pkt[2..],
+//          );
+// 
+//          std.debug.print("Updated position for id {}: x: {d:.2} y: {d:.2}\n", .{
+//             id, players[id].x, players[id].y
+//          });
+// 
+//          continue :hot ops.DEFAULT;
+//       },
+//    }
+// }
 
 test "Hello world" {
    std.debug.print("Hello world\n", .{});
@@ -244,4 +241,49 @@ inline fn broadcast(conns_id: u8, pkt: []const u8) !void {
             c.getOsSockLen(),
          );
    }
+}
+
+// Accept new connections
+// Do the handshake
+fn acceptor() !void {
+   // get the next free id
+   while (true) {
+
+      var id: u16 = 0; // we check this later
+      var i: u8 = 0;
+      for (conns) |conn| {
+         defer i += 1;
+
+         if (conn) |_| {
+            id = @intCast(i);
+            break;
+         }
+      }
+
+      // we didn't find any id.
+      // If we don't find an id... we should wait until an id is free. How the
+      // hell do we do that ?
+
+      // I have an idea, but it's a terrible one...
+
+      // for now though, let's ignore this problem
+      // TODO: send the client a "lobby full" message
+      if (i == conns.len-1) {
+         std.debug.print("Lobby full, declined connection\n", .{});
+         // Read above TODO;
+      }
+
+      std.debug.print("Found id: {}\n", .{id});
+
+      // get the client of new person
+      conns[id] = try tcp.new_con(id);
+
+      std.debug.print("New connection: {any} {}\n", .{
+         conns[id].?.in.sa,
+         conns[id].?.getPort(),
+      });
+   }
+}
+
+fn tcp_receiver() !void {
 }

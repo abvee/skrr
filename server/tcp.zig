@@ -40,6 +40,22 @@ test "hello socket" {
 }
 
 // return the client and fill in the id for the client fd
-pub fn new_con(i: u8) !net.Address {
-   _ = i;
+pub fn new_con(i: u16) !net.Address {
+
+   // return the incoming client address
+   var ret_client: net.Address = undefined;
+   var ret_client_len: posix.socklen_t = @sizeOf(net.Address);
+
+   const client_fd = try posix.accept(
+      sock,
+      &ret_client.any,
+      &ret_client_len,
+      posix.SOCK.NONBLOCK,
+   );
+
+   clients[i] = std.fs.File{
+      .handle = client_fd,
+   };
+
+   return ret_client;
 }
