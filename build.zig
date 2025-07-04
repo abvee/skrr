@@ -21,11 +21,11 @@ pub fn build(b: *std.Build) void {
         .root_module = exe_mod,
     });
 
-	// We include raylib's header file path and statically link an object file
-	// This way we can import raylib stuff in our program
-	exe.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
-	exe.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
-	exe.linkLibC();
+   // We include raylib's header file path and statically link an object file
+   // This way we can import raylib stuff in our program
+   exe.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
+   exe.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
+   exe.linkLibC();
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
@@ -62,31 +62,31 @@ pub fn build(b: *std.Build) void {
     });
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
-	// level testing
-	const level_tests = b.addTest(.{
-		.root_module = b.createModule(.{
-			.root_source_file = b.path("src/level.zig"),
-			.target = target,
-			.optimize = optimize,
-		}),
-	});
-	level_tests.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
-	level_tests.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
-	level_tests.linkLibC();
-	const run_level_unit_tests = b.addRunArtifact(level_tests);
+   // level testing
+   const level_tests = b.addTest(.{
+      .root_module = b.createModule(.{
+         .root_source_file = b.path("src/level.zig"),
+         .target = target,
+         .optimize = optimize,
+      }),
+   });
+   level_tests.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
+   level_tests.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
+   level_tests.linkLibC();
+   const run_level_unit_tests = b.addRunArtifact(level_tests);
 
-	// network testing
-	const network_tests = b.addTest(.{
-		.root_module = b.createModule(.{
-			.root_source_file = b.path("src/network.zig"),
-			.target = target,
-			.optimize = optimize,
-		}),
-	});
-	network_tests.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
-	network_tests.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
-	network_tests.linkLibC();
-	const run_network_unit_tests = b.addRunArtifact(network_tests);
+   // network testing
+   const network_tests = b.addTest(.{
+      .root_module = b.createModule(.{
+         .root_source_file = b.path("src/network.zig"),
+         .target = target,
+         .optimize = optimize,
+      }),
+   });
+   network_tests.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
+   network_tests.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
+   network_tests.linkLibC();
+   const run_network_unit_tests = b.addRunArtifact(network_tests);
 
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request
@@ -96,7 +96,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_level_unit_tests.step);
     test_step.dependOn(&run_network_unit_tests.step);
 
-	// -- SERVER STUFF BEYOND THIS POINT --
+   // -- SERVER STUFF BEYOND THIS POINT --
     const server_mod = b.createModule(.{
         .root_source_file = b.path("server/main.zig"),
         .target = target,
@@ -106,22 +106,22 @@ pub fn build(b: *std.Build) void {
         .name = "skrr-server",
         .root_module = server_mod,
     });
-	b.installArtifact(server_exe);
-	// server run step
-	const server_run = b.addRunArtifact(server_exe);
+   b.installArtifact(server_exe);
+   // server run step
+   const server_run = b.addRunArtifact(server_exe);
     server_run.step.dependOn(b.getInstallStep());
 
-	// argument passing
+   // argument passing
     if (b.args) |args| {
         server_run.addArgs(args);
     }
 
-	// run step
+   // run step
     const server_run_step = b.step("serve", "Start the server");
     server_run_step.dependOn(&server_run.step);
 
-	// server testing
-	server_test(b, server_mod);
+   // server testing
+   server_test(b, server_mod);
 }
 
 // all testing related to the server
@@ -130,6 +130,6 @@ inline fn server_test(b: *std.Build, server_mod: *std.Build.Module) void {
         .root_module = server_mod,
     });
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-	const test_step = b.step("servetest", "Run all server unit tests");
+   const test_step = b.step("servetest", "Run all server unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
 }
