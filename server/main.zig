@@ -252,38 +252,28 @@ fn acceptor() !void {
       var id: u16 = 0; // we check this later
       var i: u8 = 0;
       for (conns) |conn| {
-         defer i += 1;
-
-         if (conn) |_| {
+         if (conn == null) {
             id = @intCast(i);
             break;
          }
+         i += 1;
       }
 
-      // we didn't find any id.
+      // suppose we didn't find any id.
       // If we don't find an id... we should wait until an id is free. How the
       // hell do we do that ?
-
       // I have an idea, but it's a terrible one...
-
       // for now though, let's ignore this problem
       // TODO: send the client a "lobby full" message
-      if (i == conns.len-1) {
-         std.debug.print("Lobby full, declined connection\n", .{});
-         // Read above TODO;
-      }
 
       std.debug.print("Found id: {}\n", .{id});
 
       // get the client of new person
       conns[id] = try tcp.new_con(id);
 
-      std.debug.print("New connection: {any} {}\n", .{
-         conns[id].?.in.sa,
+      std.debug.print("New connection: {any}:{}\n", .{
+         std.mem.asBytes(&conns[id].?.in.sa.addr),
          conns[id].?.getPort(),
       });
    }
-}
-
-fn tcp_receiver() !void {
 }

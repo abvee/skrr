@@ -1,6 +1,7 @@
 const std = @import("std");
 const net = std.net;
 const posix = std.posix;
+const tcp = @import("tcp.zig");
 const assert = std.debug.assert;
 const rl = @cImport({
    @cInclude("raylib.h");
@@ -37,28 +38,16 @@ pub const ops = enum(u8) {
 // start the socket
 // connect to the server
 pub fn init() !void {
-   const sock = try posix.socket(
-      posix.AF.INET,
-      posix.SOCK.DGRAM,
-      posix.IPPROTO.UDP,
-   );
-   errdefer posix.close(sock);
-
-   // TODO: don't hardcode the server's address.
-   try posix.connect(
-      sock,
-      &addr.any,
-      addr.getOsSockLen(),
-   );
-
-   server = std.fs.File{
-      .handle = sock
-   };
+   try tcp.init();
 }
 
 pub fn deinit() void {
-   // TODO: assert that init() has been called
-   server.close();
+   tcp.deinit();
+}
+
+test "init" {
+   try init();
+   defer tcp.deinit();
 }
 
 const PlayerError = error {
@@ -117,18 +106,6 @@ pub inline fn disconnect() void {
       catch {};
 }
 
-test "new join" {
-   try init();
-   defer deinit();
-
-   var others: [NUM_PLAYERS]?rl.Vector2 = .{null} ** NUM_PLAYERS;
-   try new_join(&others);
-
-   std.debug.print("{}\n", .{id});
-   for (others, 0..) |o, i|
-      if (o) |_|
-         std.debug.print("id: {} x: {} y: {}\n", .{i, o.?.x, o.?.y});
-}
 
 // send our player's position
 pub fn send_pos(position: rl.Vector2) !void {
