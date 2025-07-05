@@ -2,13 +2,15 @@ const std = @import("std");
 const posix = std.posix;
 const net = std.net;
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
+const assert = std.debug.assert;
 
 var sock: posix.socket_t = undefined;
 const addr = net.Address.initIp4(
    [4]u8{127,0,0,1},
    12271,
 );
-var clients: [NUM_PLAYERS]std.fs.File = undefined;
+var clients: [NUM_PLAYERS]std.fs.File =
+   [_]std.fs.File{std.fs.File{.handle=0}} ** NUM_PLAYERS;
 
 // start socket and bind it
 pub fn init() !void {
@@ -58,4 +60,13 @@ pub fn new_con(i: u16) !net.Address {
    };
 
    return ret_client;
+}
+
+// write packet to that client
+pub inline fn yeet(id: u16, pkt: []u8) !void {
+   // TODO: assert that the file handle is not the default, ie, the client
+   // exists
+   assert(clients[id].handle != 0);
+
+   _ = try clients[id].write(pkt);
 }

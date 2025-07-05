@@ -45,6 +45,7 @@ const pdata = struct {
 };
 
 var conns: [NUM_PLAYERS]?net.Address = .{null} ** NUM_PLAYERS;
+var num_conns: u16 = 0; // number of active players
 var players: [NUM_PLAYERS]pdata = undefined;
 
 pub fn main() !void {
@@ -147,10 +148,6 @@ pub fn main() !void {
 //    }
 // }
 
-test "Hello world" {
-   std.debug.print("Hello world\n", .{});
-}
-
 fn pdata_sender() !void {
    var pkt: [2 + @sizeOf(pdata)]u8 =
       [_]u8{0} ** (2 + @sizeOf(pdata));
@@ -178,44 +175,6 @@ fn pdata_sender() !void {
    }
 }
 
-// send the client his hello packet
-// return id
-inline fn hello(client: net.Address) !u8 {
-
-   var hello_pkt: [1024]u8 = [_]u8{0} ** 1024;
-   hello_pkt[0] = @intCast(@intFromEnum(ops.HELLO)); // the op code
-
-   var hello_pkt_index: u32 = 2; // the 1st byte is for the player's id.
-
-   var id: u8 = 0;
-
-   for (conns, 0..) |conn, i| {
-      // player exists, add them to the pkt
-      if (conn) |_| {
-         hello_pkt[hello_pkt_index] = @intCast(i);
-         std.mem.copyForwards(
-            u8,
-            hello_pkt[hello_pkt_index + 1..hello_pkt_index + @sizeOf(pdata) + 1],
-            std.mem.asBytes(&players[i]),
-         );
-         hello_pkt_index += 1 + @sizeOf(pdata);
-      }
-      else id = @intCast(i);
-      // get the last free id ^
-   }
-
-   hello_pkt[1] = id; // player id
-
-   _ = try posix.sendto(
-      sock,
-      hello_pkt[0..hello_pkt_index],
-      0,
-      &client.any,
-      client.getOsSockLen(),
-   );
-
-   return id;
-}
 
 test "hello packet" {
    const client = net.Address.initIp4(
@@ -246,11 +205,12 @@ inline fn broadcast(conns_id: u8, pkt: []const u8) !void {
 // Accept new connections
 // Do the handshake
 fn acceptor() !void {
-   // get the next free id
-   while (true) {
+   std.debug.print("Server is now accepting connections\n", .{});
+   // we only accept if we have space
+   while (num_conns < NUM_PLAYERS) {
 
-      var id: u16 = 0; // we check this later
-      var i: u8 = 0;
+      var id: u16 = 0;
+      var i: u8 = 0; // we check this later
       for (conns) |conn| {
          if (conn == null) {
             id = @intCast(i);
@@ -258,22 +218,43 @@ fn acceptor() !void {
          }
          i += 1;
       }
-
-      // suppose we didn't find any id.
-      // If we don't find an id... we should wait until an id is free. How the
-      // hell do we do that ?
-      // I have an idea, but it's a terrible one...
-      // for now though, let's ignore this problem
-      // TODO: send the client a "lobby full" message
-
       std.debug.print("Found id: {}\n", .{id});
 
       // get the client of new person
       conns[id] = try tcp.new_con(id);
-
+      num_conns += 1;
       std.debug.print("New connection: {any}:{}\n", .{
          std.mem.asBytes(&conns[id].?.in.sa.addr),
          conns[id].?.getPort(),
       });
+
+      // send hello packet
+      var buf: [1024]u8 = [_]u8{0} ** 1024;
+      const pkt = hello(id, &buf);
+      try tcp.yeet(id, pkt); // sending a packet should not fail
    }
+}
+
+// send the client his hello packet
+inline fn hello(id: u16, buf: []u8) []u8 {
+   buf[0] = @intCast(@intFromEnum(ops.HELLO)); // the op code
+   buf[1] = @intCast(id);
+   var buf_index: u32 = 2;
+
+   for (conns, 0..) |conn, i| {
+      // skip our player
+      if (i == id) continue;
+
+      // if player exists, add it
+      if (conn) |_| {
+         buf[buf_index] = @intCast(i);
+         buf_index += 1;
+      }
+   }
+   return buf[0..buf_index];
+}
+test "hello" {
+   std.debug.print("HELLO PKT\n", .{});
+   const pkt = hello();
+   std.debug.print("{x}\n", .{pkt});
 }
