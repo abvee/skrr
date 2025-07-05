@@ -33,3 +33,9 @@ pub fn deinit() void {
    server.close();
    // this ^ should close the socket
 }
+
+// get a packet
+pub inline fn yoink(buf: []u8) ![]u8 {
+   const n = try server.read(buf);
+   return buf[0..n];
+}
