@@ -47,6 +47,7 @@ pub fn main() !void {
 
    // This needs to be set for making the window tiling on sway
    rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);
+   rl.SetTraceLogLevel(rl.LOG_ERROR);
 
    rl.InitWindow(window_width, window_height, "skrr");
    defer rl.CloseWindow();
@@ -81,7 +82,7 @@ pub fn main() !void {
 
    // start the threads
    _ = try std.Thread.spawn(.{}, physics, .{});
-   _ = try std.Thread.spawn(.{}, reciever, .{});
+   // _ = try std.Thread.spawn(.{}, reciever, .{});
 
    while (!rl.WindowShouldClose()) {
 
@@ -141,44 +142,12 @@ fn physics() void {
    while (true) {
       std.time.sleep(std.time.ns_per_s * 0.1);
 
-      network.send_pos(player_pos)
-         catch {};
+      // network.send_pos(player_pos) catch {};
    }
 }
 
 // the network reciever thread.
 // I'm putting it here. Yes, I know I'm exposing network.ops. No, I don't care
-fn reciever() void {
-   var buf: [1024]u8 = [_]u8{0} ** 1024;
-   var pkt: []u8 = undefined;
-
-   pkt = network.recv_pkt(&buf);
-
-   while (true) : (
-      pkt = network.recv_pkt(&buf)
-   ) switch (network.ops.valid(pkt[0])) {
-      network.ops.DISCONNECT => {
-         others[pkt[1]] = null;
-      },
-      network.ops.POSITION => {
-         // update the position of all known clients
-         var i: usize = 1;
-         while (i < pkt.len) : (i += @sizeOf(rl.Vector2) + 1) {
-            const id = pkt[i];
-
-            // see if not null
-            if (others[id]) |_| {
-               others[id] = std.mem.bytesToValue(
-                  rl.Vector2,
-                  pkt[i+1..i+@sizeOf(rl.Vector2)+1],
-               );
-            }
-         }
-      },
-      else => {},
-   };
-}
-
 
 // should be called inside raylib BeginMode2D
 // TODO: assert we are inside raylib BeginMode2D

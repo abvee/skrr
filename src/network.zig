@@ -10,12 +10,6 @@ const rl = @cImport({
 });
 
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
-
-const addr = net.Address.initIp4(
-   [4]u8{127,0,0,1},
-   12271,
-); // the server address
-var server: std.fs.File = undefined;
 var id: u8 = undefined; // the id the server assigns us
 
 pub const ops = enum(u8) {
@@ -54,76 +48,41 @@ const PlayerError = error {
    PlayerAlreadyConnected,
 };
 
+// recieve the hello packet and set the others to not null
 pub fn new_join(others: []?rl.Vector2) !void {
-   // send the hello packet
-   try hello();
-
-   // get hello packet back
+   // get hello packet from server
    var buf: [1024]u8 = [_]u8{0} ** 1024;
-   const n = try server.read(&buf);
+   const pkt = try tcp.yoink(&buf);
 
    // we should get the first byte as the op for hello
-   assert(buf[0] == @intFromEnum(ops.HELLO));
+   assert(pkt[0] == @intFromEnum(ops.HELLO));
+   assert(pkt[1] < NUM_PLAYERS); // make sure we don't get an id that's out of bounds
 
-   // load your id
-   assert(buf[1] < NUM_PLAYERS); // make sure we don't get an id that's out of bounds
    id = buf[1];
 
+   // for each id, set that position to not null
+   for (pkt[2..]) |i| {
+      assert(i < NUM_PLAYERS);
 
-   // load everyone else's positions
-   var i: usize = 2;
-   while (i < n) : (i += @sizeOf(rl.Vector2) + 1) {
-      // id of the other person
-      const other_id = buf[i];
+      if (others[i] != null)
+         return PlayerError.PlayerAlreadyConnected;
 
-      if (others[other_id] == null) {
-         others[other_id] = std.mem.bytesToValue(
-            rl.Vector2,
-            buf[i + 1..i + @sizeOf(rl.Vector2) + 1]
-         );
-      }
-      else return PlayerError.PlayerAlreadyConnected;
+      // hmm, perhaps we should have a more sensible default position ?
+      // Setting it to (0,0) works ig, but who knows where that would be in
+      // world space
+      others[i] = rl.Vector2{.x = 0, .y = 0};
    }
 }
 
-// construct and send the hello packet
-inline fn hello() !void {
-   const pkt: [1]u8 = [1]u8{0xff};
-   // for now, the hello packet is just a single byte with the OP
-   _ = try server.write(&pkt);
-}
+pub fn disconnect() void { }
 
-pub inline fn disconnect() void {
-   // just write the disconnect
-   // ideally, this cannot fail....
-   // Even if it does, a server timeout should take the player out of
-   // comission
-   const pkt: [2]u8 = [_]u8{
-      @intFromEnum(ops.DISCONNECT),
-      id,
-   };
-   _ = server.write(&pkt)
-      catch {};
-}
+test "hello packet stuff" {
+   try init();
+   defer deinit();
 
+   var others: [NUM_PLAYERS]?rl.Vector2 = .{null} ** NUM_PLAYERS;
 
-// send our player's position
-pub fn send_pos(position: rl.Vector2) !void {
-   var pkt: [2 + @sizeOf(rl.Vector2)]u8 =
-      [_]u8{0} ** (2 + @sizeOf(rl.Vector2));
+   try new_join(&others);
 
-   pkt[0] = @intFromEnum(ops.POSITION);
-   pkt[1] = id;  // player's id
-
-   std.mem.copyForwards(
-      u8,
-      pkt[2..],
-      std.mem.asBytes(&position),
-   );
-   _ = try server.write(&pkt);
-}
-
-pub inline fn recv_pkt(buf: []u8) []u8 {
-   return buf[0..server.read(buf) catch 1];
-   // TODO: do something about this ^
+   while (true) {}
 }
