@@ -5,6 +5,8 @@ const assert = std.debug.assert;
 const tcp = @import("tcp.zig");
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
 
+const stdin = std.io.getStdIn();
+
 // These operations encode a hot loop
 const ops = enum(u16) {
    DEFAULT = 0x100, // Should be unreachable
@@ -49,6 +51,8 @@ var conns: [NUM_PLAYERS]?net.Address = .{null} ** NUM_PLAYERS;
 var num_conns: u16 = 0; // number of active players
 var players: [NUM_PLAYERS]pdata = undefined;
 
+var run_threads = true;
+
 pub fn main() !void {
 
    // initialize
@@ -59,8 +63,11 @@ pub fn main() !void {
    _ = try std.Thread.spawn(.{}, acceptor, .{});
    // start tcp reciever tread
    _ = try std.Thread.spawn(.{}, receiver, .{});
+   defer run_threads = false;
 
-   while (true) {}
+   // Break on reading anything
+   var buf: [1]u8 = [_]u8{0};
+   _ = try stdin.read(&buf);
 }
 
 fn pdata_sender() !void {
@@ -118,12 +125,12 @@ inline fn broadcast(conns_id: u8, pkt: []const u8) !void {
 }
 
 // Accept new connections
-// Do the handshake
 fn acceptor() !void {
    std.debug.print("Server is now accepting connections\n", .{});
    // we only accept if we have space
    while (num_conns < NUM_PLAYERS) {
 
+      // get the next free id
       var id: u16 = 0;
       var i: u8 = 0; // we check this later
       for (conns) |conn| {
@@ -133,14 +140,14 @@ fn acceptor() !void {
          }
          i += 1;
       }
-      std.debug.print("Found id: {}\n", .{id});
 
       // get the client of new person
       conns[id] = try tcp.new_con(id);
       num_conns += 1;
-      std.debug.print("New connection: {any}:{}\n", .{
+      std.debug.print("New connection: {any}:{} id: {}\n", .{
          std.mem.asBytes(&conns[id].?.in.sa.addr),
          conns[id].?.getPort(),
+         id,
       });
 
       // send hello packet
@@ -175,28 +182,35 @@ test "hello" {
 }
 
 // TCP receiver
-// loop through the sockets
+// loop through the nonblocking sockets, and if there's a packet do something
+// with it ig
 fn receiver() !void {
    var buf: [1024]u8 = [_]u8{0} ** 1024;
    var pkt: []u8 = undefined;
 
-   for (conns, 0..) |conn, i| {
+   while (true) : (
+      std.time.sleep(std.time.ns_per_s * 2)
+   ) {
+      for (conns, 0..) |conn, i| {
+         // player exists
+         if (conn) |c| {
+            pkt = tcp.yoink(@intCast(i), &buf)
+               catch |e| switch (e) {
+                  error.WouldBlock => {
+                     std.debug.print("id {} has no packets\n", .{i});
+                     continue;
+                  },
+                  // ^ means no packet
+                  else => return e,
+               };
 
-      // player exists
-      if (conn) |c| {
-         pkt = tcp.yoink(@intCast(i), &buf)
-            catch |e| switch (e) {
-               error.WouldBlock => continue,
-               // ^ means no packet
-               else => return e,
-            };
-
-         std.debug.print("Recieved packet from {any}:{} - {x}\n", .{
-            std.mem.asBytes(&c.any),
-            c.getPort(),
-            pkt,
-         });
-         // TODO: handle the packet here
+            std.debug.print("Recieved packet from {any}:{} - {x}\n", .{
+               c.any,
+               c.getPort(),
+               pkt,
+            });
+            // TODO: handle the packet here
+         }
       }
    }
 }

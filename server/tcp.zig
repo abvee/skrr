@@ -35,6 +35,11 @@ pub fn init() !void {
 
 pub fn deinit() void {
    posix.close(sock);
+
+   for (clients) |client| {
+      if (client.handle != 0)
+         client.close();
+   }
 }
 
 test "hello socket" {
