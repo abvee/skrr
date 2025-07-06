@@ -5,6 +5,7 @@ const assert = std.debug.assert;
 const tcp = @import("tcp.zig");
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
 
+// These operations encode a hot loop
 const ops = enum(u16) {
    DEFAULT = 0x100, // Should be unreachable
    HELLO = 0xff,
@@ -49,104 +50,26 @@ var num_conns: u16 = 0; // number of active players
 var players: [NUM_PLAYERS]pdata = undefined;
 
 pub fn main() !void {
+   // allocator
+   var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+   const allocator = gpa.allocator();
+   defer {
+       const deinit_status = gpa.deinit();
+       // can't try in defer as defer is executed after we return
+       if (deinit_status == .leak) @panic("Memory leak");
+   }
+
    // initialize
    try tcp.init();
    defer tcp.deinit();
    
    // start tcp acceptor thread
    _ = try std.Thread.spawn(.{}, acceptor, .{});
+   // start tcp reciever tread
+   _ = try std.Thread.spawn(.{}, receiver, .{allocator});
+
    while (true) {}
 }
-
-// pub fn main() !void {
-
-//    // this buffer holds all our data
-//    var buf: [1024]u8 = [_]u8{0} ** 1024;
-//    var pkt: []u8 = undefined; // the packet
-// 
-//    var client: net.Address = undefined;
-//    var client_len: posix.socklen_t = @sizeOf(net.Address);
-// 
-//    _ = try std.Thread.spawn(.{}, pdata_sender, .{});
-// 
-//    hot: switch (ops.DEFAULT) {
-//       .DEFAULT => {
-//          const n = try posix.recvfrom(
-//             sock,
-//             &buf,
-//             0, // flags
-//             &client.any, // client addr destination
-//             &client_len, // client addr length
-//          );
-// 
-//          pkt = buf[0..n]; // fill packet
-// 
-//          std.debug.print("Recieved packet: {x}\n", .{pkt});
-// 
-//          // valid() will return the enum in pkt[0] if it's valid, otherwise
-//          // it'll return DEFAULT
-//          continue :hot ops.valid(pkt[0]);
-//       },
-//       .HELLO => {
-//          // TODO: assert to make sure the client exists before assigning
-// 
-//          // construct and send the hello packet
-//          const i = hello(client) catch continue :hot ops.DEFAULT;
-//          // TODO: do something if we fail to send the hello packet
-// 
-//          // set the client id
-//          conns[i] = client;
-//          continue :hot ops.DEFAULT;
-//       },
-//       .DISCONNECT => {
-//          assert(pkt[0] == @intFromEnum(ops.DISCONNECT));
-//          assert(pkt.len >= 2);
-// 
-//          const id = pkt[1];
-// 
-//          // before we close the connection, we should broadcast to everyone
-//          // that the client has disconnected
-//          const disconnect_pkt: [2]u8 = [_]u8{
-//             @intFromEnum(ops.DISCONNECT),
-//             id,
-//          };
-//          broadcast(id, &disconnect_pkt)
-//             catch {};
-//          // TODO: do something when broadcasting fails.
-// 
-//          conns[id] = null;
-// 
-//          // TODO: do some handshake to make sure any client cannot close any
-//          // other client, either maliciously or by mistake
-//          std.debug.print("Disconnected player w/ id: {}\n", .{id});
-//          continue :hot ops.DEFAULT;
-//       },
-//       .POS => {
-//          assert(pkt[0] == @intFromEnum(ops.POS));
-//          const id = pkt[1];
-// 
-//          // verify that the client has the same id
-//          if (conns[id] == null)
-//             continue :hot ops.DEFAULT
-//          else if (!conns[id].?.eql(client))
-//             continue :hot ops.DEFAULT;
-//          // TODO: someone might be intentionally trying to change another's
-//          // position. Anticheat will come later
-// 
-//          // Update the positions
-//          players[id] = std.mem.bytesToValue(
-//             pdata,
-//             pkt[2..],
-//          );
-// 
-//          std.debug.print("Updated position for id {}: x: {d:.2} y: {d:.2}\n", .{
-//             id, players[id].x, players[id].y
-//          });
-// 
-//          continue :hot ops.DEFAULT;
-//       },
-//    }
-// }
 
 fn pdata_sender() !void {
    var pkt: [2 + @sizeOf(pdata)]u8 =
@@ -257,4 +180,31 @@ test "hello" {
    std.debug.print("HELLO PKT\n", .{});
    const pkt = hello();
    std.debug.print("{x}\n", .{pkt});
+}
+
+// TCP receiver
+// We see if there are any packets, and if so, we handle them
+fn receiver(allocator: std.mem.Allocator) !void {
+   // buffer for packet
+   var buf: [1024]u8 = [_]u8{0} ** 1024;
+   var pkt: []u8 = undefined; // the actual packet
+
+   hot: switch (ops.DEFAULT) {
+      ops.DEFAULT => {
+         const active_conns = tcp.poll(allocator);
+         defer allocator.free(active_conns);
+
+         for (active_conns) |conn_id| {
+            // first check that we haven't got a null connection.
+            assert(conns[conn_id] != null);
+
+            // Then we yoink the packet
+            pkt = tcp.yoink(conn_id, &buf);
+
+            // then we handle the packet
+            std.debug.print("{x}\n", .{pkt});
+            continue :hot ops.DEFAULT;
+         }
+      }
+   }
 }

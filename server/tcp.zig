@@ -9,6 +9,7 @@ const addr = net.Address.initIp4(
    [4]u8{127,0,0,1},
    12271,
 );
+
 var clients: [NUM_PLAYERS]std.fs.File =
    [_]std.fs.File{std.fs.File{.handle=0}} ** NUM_PLAYERS;
 
@@ -69,4 +70,14 @@ pub inline fn yeet(id: u16, pkt: []u8) !void {
    assert(clients[id].handle != 0);
 
    _ = try clients[id].write(pkt);
+}
+
+// return packet from a client
+pub inline fn yoink(id: u16, buf: []u8) ![]u8 {
+   // TODO: assert that the file handle is not the default, ie, the client
+   // exists
+   assert(clients[id].handle != 0);
+
+   const n = try clients[id].read(buf);
+   return buf[0..n]
 }
