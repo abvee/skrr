@@ -79,5 +79,5 @@ pub inline fn yoink(id: u16, buf: []u8) ![]u8 {
    assert(clients[id].handle != 0);
 
    const n = try clients[id].read(buf);
-   return buf[0..n]
+   return buf[0..n];
 }

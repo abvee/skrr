@@ -50,14 +50,6 @@ var num_conns: u16 = 0; // number of active players
 var players: [NUM_PLAYERS]pdata = undefined;
 
 pub fn main() !void {
-   // allocator
-   var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-   const allocator = gpa.allocator();
-   defer {
-       const deinit_status = gpa.deinit();
-       // can't try in defer as defer is executed after we return
-       if (deinit_status == .leak) @panic("Memory leak");
-   }
 
    // initialize
    try tcp.init();
@@ -66,7 +58,7 @@ pub fn main() !void {
    // start tcp acceptor thread
    _ = try std.Thread.spawn(.{}, acceptor, .{});
    // start tcp reciever tread
-   _ = try std.Thread.spawn(.{}, receiver, .{allocator});
+   _ = try std.Thread.spawn(.{}, receiver, .{});
 
    while (true) {}
 }
@@ -183,28 +175,28 @@ test "hello" {
 }
 
 // TCP receiver
-// We see if there are any packets, and if so, we handle them
-fn receiver(allocator: std.mem.Allocator) !void {
-   // buffer for packet
+// loop through the sockets
+fn receiver() !void {
    var buf: [1024]u8 = [_]u8{0} ** 1024;
-   var pkt: []u8 = undefined; // the actual packet
+   var pkt: []u8 = undefined;
 
-   hot: switch (ops.DEFAULT) {
-      ops.DEFAULT => {
-         const active_conns = tcp.poll(allocator);
-         defer allocator.free(active_conns);
+   for (conns, 0..) |conn, i| {
 
-         for (active_conns) |conn_id| {
-            // first check that we haven't got a null connection.
-            assert(conns[conn_id] != null);
+      // player exists
+      if (conn) |c| {
+         pkt = tcp.yoink(@intCast(i), &buf)
+            catch |e| switch (e) {
+               error.WouldBlock => continue,
+               // ^ means no packet
+               else => return e,
+            };
 
-            // Then we yoink the packet
-            pkt = tcp.yoink(conn_id, &buf);
-
-            // then we handle the packet
-            std.debug.print("{x}\n", .{pkt});
-            continue :hot ops.DEFAULT;
-         }
+         std.debug.print("Recieved packet from {any}:{} - {x}\n", .{
+            std.mem.asBytes(&c.any),
+            c.getPort(),
+            pkt,
+         });
+         // TODO: handle the packet here
       }
    }
 }
