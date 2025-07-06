@@ -1,25 +1,25 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+   const target = b.standardTargetOptions(.{});
+   const optimize = b.standardOptimizeOption(.{});
 
-    // We will also create a module for our other entry point, 'main.zig'.
-    const exe_mod = b.createModule(.{
-        // `root_source_file` is the Zig "entry point" of the module. If a module
-        // only contains e.g. external object files, you can make this `null`.
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    // This creates another `std.Build.Step.Compile`, but this one builds an executable
-    // rather than a static library.
-    const exe = b.addExecutable(.{
-        .name = "skrr",
-        .root_module = exe_mod,
-    });
+   // We will also create a module for our other entry point, 'main.zig'.
+   const exe_mod = b.createModule(.{
+      // `root_source_file` is the Zig "entry point" of the module. If a module
+      // only contains e.g. external object files, you can make this `null`.
+      // In this case the main source file is merely a path, however, in more
+      // complicated build scripts, this could be a generated file.
+      .root_source_file = b.path("src/main.zig"),
+      .target = target,
+      .optimize = optimize,
+   });
+   // This creates another `std.Build.Step.Compile`, but this one builds an executable
+   // rather than a static library.
+   const exe = b.addExecutable(.{
+      .name = "skrr",
+      .root_module = exe_mod,
+   });
 
    // We include raylib's header file path and statically link an object file
    // This way we can import raylib stuff in our program
@@ -27,40 +27,40 @@ pub fn build(b: *std.Build) void {
    exe.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
    exe.linkLibC();
 
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
-    b.installArtifact(exe);
+   // This declares intent for the executable to be installed into the
+   // standard location when the user invokes the "install" step (the default
+   // step when running `zig build`).
+   b.installArtifact(exe);
 
-    // This *creates* a Run step in the build graph, to be executed when another
-    // step is evaluated that depends on it. The next line below will establish
-    // such a dependency.
-    const run_cmd = b.addRunArtifact(exe);
+   // This *creates* a Run step in the build graph, to be executed when another
+   // step is evaluated that depends on it. The next line below will establish
+   // such a dependency.
+   const run_cmd = b.addRunArtifact(exe);
 
-    // By making the run step depend on the install step, it will be run from the
-    // installation directory rather than directly from within the cache directory.
-    // This is not necessary, however, if the application depends on other installed
-    // files, this ensures they will be present and in the expected location.
-    run_cmd.step.dependOn(b.getInstallStep());
+   // By making the run step depend on the install step, it will be run from the
+   // installation directory rather than directly from within the cache directory.
+   // This is not necessary, however, if the application depends on other installed
+   // files, this ensures they will be present and in the expected location.
+   run_cmd.step.dependOn(b.getInstallStep());
 
-    // This allows the user to pass arguments to the application in the build
-    // command itself, like this: `zig build run -- arg1 arg2 etc`
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+   // This allows the user to pass arguments to the application in the build
+   // command itself, like this: `zig build run -- arg1 arg2 etc`
+   if (b.args) |args| {
+      run_cmd.addArgs(args);
+   }
 
-    // This creates a build step. It will be visible in the `zig build --help` menu,
-    // and can be selected like this: `zig build run`
-    // This will evaluate the `run` step rather than the default, which is "install".
-    const run_step = b.step("run", "Run the game client");
-    run_step.dependOn(&run_cmd.step);
+   // This creates a build step. It will be visible in the `zig build --help` menu,
+   // and can be selected like this: `zig build run`
+   // This will evaluate the `run` step rather than the default, which is "install".
+   const run_step = b.step("run", "Run the game client");
+   run_step.dependOn(&run_cmd.step);
 
-    // Creates a step for unit testing. This only builds the test executable
-    // but does not run it.
-    const exe_unit_tests = b.addTest(.{
-        .root_module = exe_mod,
-    });
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+   // Creates a step for unit testing. This only builds the test executable
+   // but does not run it.
+   const exe_unit_tests = b.addTest(.{
+      .root_module = exe_mod,
+   });
+   const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
    // level testing
    const level_tests = b.addTest(.{
@@ -70,6 +70,7 @@ pub fn build(b: *std.Build) void {
          .optimize = optimize,
       }),
    });
+
    level_tests.addIncludePath(b.path("raylib-5.5_linux_amd64/include"));
    level_tests.addObjectFile(b.path("raylib-5.5_linux_amd64/lib/libraylib.a"));
    level_tests.linkLibC();
@@ -88,37 +89,37 @@ pub fn build(b: *std.Build) void {
    network_tests.linkLibC();
    const run_network_unit_tests = b.addRunArtifact(network_tests);
 
-    // Similar to creating the run step earlier, this exposes a `test` step to
-    // the `zig build --help` menu, providing a way for the user to request
-    // running the unit tests.
-    const test_step = b.step("test", "Run all unit tests");
-    test_step.dependOn(&run_exe_unit_tests.step);
-    test_step.dependOn(&run_level_unit_tests.step);
-    test_step.dependOn(&run_network_unit_tests.step);
+   // Similar to creating the run step earlier, this exposes a `test` step to
+   // the `zig build --help` menu, providing a way for the user to request
+   // running the unit tests.
+   const test_step = b.step("test", "Run all unit tests");
+   test_step.dependOn(&run_exe_unit_tests.step);
+   test_step.dependOn(&run_level_unit_tests.step);
+   test_step.dependOn(&run_network_unit_tests.step);
 
    // -- SERVER STUFF BEYOND THIS POINT --
-    const server_mod = b.createModule(.{
-        .root_source_file = b.path("server/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    const server_exe = b.addExecutable(.{
-        .name = "skrr-server",
-        .root_module = server_mod,
-    });
+   const server_mod = b.createModule(.{
+      .root_source_file = b.path("server/main.zig"),
+      .target = target,
+      .optimize = optimize,
+   });
+   const server_exe = b.addExecutable(.{
+      .name = "skrr-server",
+      .root_module = server_mod,
+   });
    b.installArtifact(server_exe);
    // server run step
    const server_run = b.addRunArtifact(server_exe);
-    server_run.step.dependOn(b.getInstallStep());
+   server_run.step.dependOn(b.getInstallStep());
 
    // argument passing
-    if (b.args) |args| {
-        server_run.addArgs(args);
-    }
+   if (b.args) |args| {
+      server_run.addArgs(args);
+   }
 
    // run step
-    const server_run_step = b.step("serve", "Start the server");
-    server_run_step.dependOn(&server_run.step);
+   const server_run_step = b.step("serve", "Start the server");
+   server_run_step.dependOn(&server_run.step);
 
    // server testing
    server_test(b, server_mod);
@@ -126,10 +127,11 @@ pub fn build(b: *std.Build) void {
 
 // all testing related to the server
 inline fn server_test(b: *std.Build, server_mod: *std.Build.Module) void {
-    const exe_unit_tests = b.addTest(.{
-        .root_module = server_mod,
-    });
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-   const test_step = b.step("servetest", "Run all server unit tests");
-    test_step.dependOn(&run_exe_unit_tests.step);
+   const exe_unit_tests = b.addTest(.{
+      .root_module = server_mod,
+   });
+
+   const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+   const test_step = b.step("test-server", "Run all server unit tests");
+   test_step.dependOn(&run_exe_unit_tests.step);
 }
