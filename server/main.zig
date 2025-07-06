@@ -128,7 +128,7 @@ inline fn broadcast(conns_id: u8, pkt: []const u8) !void {
 fn acceptor() !void {
    std.debug.print("Server is now accepting connections\n", .{});
    // we only accept if we have space
-   while (num_conns < NUM_PLAYERS) {
+   while (run_threads and num_conns < NUM_PLAYERS) {
 
       // get the next free id
       var id: u16 = 0;
@@ -188,8 +188,8 @@ fn receiver() !void {
    var buf: [1024]u8 = [_]u8{0} ** 1024;
    var pkt: []u8 = undefined;
 
-   while (true) : (
-      std.time.sleep(std.time.ns_per_s * 2)
+   while (run_threads) : (
+      std.time.sleep(std.time.ns_per_s)
    ) {
       for (conns, 0..) |conn, i| {
          // player exists
@@ -205,11 +205,28 @@ fn receiver() !void {
                };
 
             std.debug.print("Recieved packet from {any}:{} - {x}\n", .{
-               c.any,
+               std.mem.asBytes(&c.in.sa.addr),
                c.getPort(),
                pkt,
             });
-            // TODO: handle the packet here
+            // TODO: move this handling somewhere else
+            // We should be able to read more and more packets ideally for both
+            // TCP and UDP while still receiving them. This would require a
+            // leaky bucket implementation on the UDP side, but TCP should do
+            // with just a queue. We'll do this later.
+
+            // each packet would need an operation and an assert
+            const operation = ops.valid(pkt[0]);
+            assert(i == pkt[1]);
+
+            switch (operation) {
+               ops.DISCONNECT => {
+                  conns[i] = null;
+                  tcp.disconnect(@intCast(i));
+                  std.debug.print("Disconnected id {}\n", .{i});
+               },
+               else => {}, // Anything else for now, we ignore
+            }
          }
       }
    }

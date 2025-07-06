@@ -21,6 +21,14 @@ pub fn init() !void {
       posix.IPPROTO.TCP,
    );
 
+   // archaic C stuff to get this to work
+   try posix.setsockopt(
+      sock,
+      posix.SOL.SOCKET,
+      posix.SO.REUSEADDR,
+      &std.mem.toBytes(@as(c_int, 1))
+   );
+
    try posix.bind(
       sock,
       &addr.any,
@@ -34,12 +42,15 @@ pub fn init() !void {
 }
 
 pub fn deinit() void {
-   posix.close(sock);
-
+   // this should be better at handling double closing
    for (clients) |client| {
       if (client.handle != 0)
          client.close();
    }
+
+   posix.close(sock);
+   std.debug.print("Please tell me we closed the socket\n", .{});
+
 }
 
 test "hello socket" {
@@ -85,4 +96,10 @@ pub inline fn yoink(id: u16, buf: []u8) ![]u8 {
 
    const n = try clients[id].read(buf);
    return buf[0..n];
+}
+
+pub inline fn disconnect(id: u8) void {
+   clients[id].close();
+   clients[id].handle = 0; // what do I even do about you ?
+   // ^ has to be done because deinit() will try and close it again
 }
