@@ -54,15 +54,19 @@ var players: [NUM_PLAYERS]pdata = undefined;
 var run_threads = true;
 
 pub fn main() !void {
+   std.debug.print("Press Enter to kill server\n", .{});
 
    // initialize
    try tcp.init();
    defer tcp.deinit();
    
    // start tcp acceptor thread
-   _ = try std.Thread.spawn(.{}, acceptor, .{});
+   const acceptor_thread = try std.Thread.spawn(.{}, acceptor, .{});
+   defer acceptor_thread.join();
    // start tcp reciever tread
-   _ = try std.Thread.spawn(.{}, receiver, .{});
+   const receiver_thread = try std.Thread.spawn(.{}, receiver, .{});
+   defer receiver_thread.join();
+
    defer run_threads = false;
 
    // Break on reading anything
@@ -97,7 +101,6 @@ fn pdata_sender() !void {
    }
 }
 
-
 test "hello packet" {
    const client = net.Address.initIp4(
       [4]u8{127,0,0,1},
@@ -128,17 +131,32 @@ inline fn broadcast(conns_id: u8, pkt: []const u8) !void {
 fn acceptor() !void {
    std.debug.print("Server is now accepting connections\n", .{});
    // we only accept if we have space
-   while (run_threads and num_conns < NUM_PLAYERS) {
+   while (run_threads) {
+      // wait for a disconnect ??? 
+      // No, wait this might kill a connect on the client side ?
+      // We should instead accept a connection here and kill it right off
+      // TODO: figure what we should do. I'm thinking just tcp.deny_con()
+      // But that would requires us to check before we wait and check
+      // everytime, so it's a mess.
+      // frankly, I don't know what to do if the lobby is full. Maybe we do
+      // need that semaphore after all, just to check if the... wait a second
+      // We can just hang with a no-op here can we not ?
+      // I mean, we are doing it now. num_conns is the semaphore right ?
+      // Okay, hold on. is looping indefinitely bad ? I mean, who care right
+      // now, but whatever, let's do it
+
+      // semaphore loop
+      // This means the lobby is full
+      // We can only accept connections when someone has disconnected
+      while (num_conns >= NUM_PLAYERS) {}
 
       // get the next free id
       var id: u16 = 0;
-      var i: u8 = 0; // we check this later
-      for (conns) |conn| {
+      for (conns, 0..) |conn, i| {
          if (conn == null) {
             id = @intCast(i);
             break;
          }
-         i += 1;
       }
 
       // get the client of new person
@@ -203,7 +221,6 @@ fn receiver() !void {
                   // ^ means no packet
                   else => return e,
                };
-
             std.debug.print("Recieved packet from {any}:{} - {x}\n", .{
                std.mem.asBytes(&c.in.sa.addr),
                c.getPort(),
@@ -222,6 +239,8 @@ fn receiver() !void {
             switch (operation) {
                ops.DISCONNECT => {
                   conns[i] = null;
+                  num_conns -= 1;
+
                   tcp.disconnect(@intCast(i));
                   std.debug.print("Disconnected id {}\n", .{i});
                },

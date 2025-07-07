@@ -49,7 +49,7 @@ pub fn deinit() void {
    }
 
    posix.close(sock);
-   std.debug.print("Please tell me we closed the socket\n", .{});
+   std.debug.print("Server closed\n", .{});
 
 }
 
