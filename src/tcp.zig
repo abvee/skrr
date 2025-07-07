@@ -39,3 +39,8 @@ pub inline fn yoink(buf: []u8) ![]u8 {
    const n = try server.read(buf);
    return buf[0..n];
 }
+
+pub inline fn yeet(pkt: []const u8) !void {
+   _ = server.write(pkt) catch {};
+   // Doesn't matter if writing to server fails
+}

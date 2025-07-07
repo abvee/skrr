@@ -74,15 +74,22 @@ pub fn new_join(others: []?rl.Vector2) !void {
    }
 }
 
-pub fn disconnect() void { }
+pub fn disconnect() void {
+   const disconnect_pkt = .{@intFromEnum(ops.DISCONNECT), id};
+   tcp.yeet(&disconnect_pkt) catch {};
+   // ^ We don't care if disconnecting to the server fails
+}
 
-test "hello packet stuff" {
+test "A connect and disconnect test" {
    try init();
    defer deinit();
 
    var others: [NUM_PLAYERS]?rl.Vector2 = .{null} ** NUM_PLAYERS;
 
    try new_join(&others);
+   defer disconnect();
 
-   while (true) {}
+   const stdin = std.io.getStdIn();
+   var x: [1]u8 = .{0};
+   _ = try stdin.read(&x);
 }
