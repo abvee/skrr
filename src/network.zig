@@ -2,6 +2,7 @@ const std = @import("std");
 const net = std.net;
 const posix = std.posix;
 const tcp = @import("tcp.zig");
+const udp = @import("udp.zig");
 const assert = std.debug.assert;
 const rl = @cImport({
    @cInclude("raylib.h");
@@ -16,7 +17,7 @@ pub const ops = enum(u8) {
    NULL = 0x01, // this is just to make the valid function work
    HELLO = 0xff,
    DISCONNECT = 0x11,
-   POSITION = 0x00,
+   POS = 0x00,
 
    // return the enum
    pub fn valid(in: @typeInfo(@This()).@"enum".tag_type) @This() {
@@ -33,10 +34,12 @@ pub const ops = enum(u8) {
 // connect to the server
 pub fn init() !void {
    try tcp.init();
+   try udp.init();
 }
 
 pub fn deinit() void {
    tcp.deinit();
+   udp.deinit();
 }
 
 test "init" {
@@ -92,4 +95,20 @@ test "A connect and disconnect test" {
    const stdin = std.io.getStdIn();
    var x: [1]u8 = .{0};
    _ = try stdin.read(&x);
+}
+
+pub fn send_pos(position: rl.Vector2) void {
+   var buf: [2 + @sizeOf(rl.Vector2)]u8 =
+      [_]u8{0} ** (2 + @sizeOf(rl.Vector2));
+
+   buf[0] = @intFromEnum(ops.POS);
+   buf[1] = id;
+   std.mem.copyForwards(
+      u8,
+      buf[2..],
+      std.mem.asBytes(&position),
+   );
+
+   std.debug.print("Client sent position: {d:.2} {d:.2}\n", position);
+   udp.yeet(&buf) catch {};
 }

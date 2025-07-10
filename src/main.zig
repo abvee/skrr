@@ -14,6 +14,8 @@ const TILE = @import("constants.zig").TILE;
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
 const SPEED = 0.1;
 
+var run_threads: bool = true;
+
 // all coordinates are in world space
 // center of the player rectangle
 var player_pos: rl.Vector2 = rl.Vector2{.x = 0, .y = 0};
@@ -64,6 +66,12 @@ pub fn main() !void {
    // TODO: handle errors. It's fine to ignore them as others just becomes
    // null for now, but we shouldn't.
 
+   // start the threads
+   // NOTE: don't move this above network.new_join(), or you'll have nasty race
+   // conditions to deal with
+   _ = try std.Thread.spawn(.{}, physics, .{});
+   defer run_threads = false;
+
    var camera: rl.Camera2D = rl.Camera2D{
       .target = player_pos,
       .offset = rl.Vector2{.x = window_width/2, .y = window_height/2},
@@ -79,10 +87,6 @@ pub fn main() !void {
    player_pos = try level.start_position("levels/level1");
    player.x = player_pos.x - TILE / 2;
    player.y = player_pos.y - TILE / 2;
-
-   // start the threads
-   _ = try std.Thread.spawn(.{}, physics, .{});
-   // _ = try std.Thread.spawn(.{}, reciever, .{});
 
    while (!rl.WindowShouldClose()) {
 
@@ -138,16 +142,16 @@ test "raylib test" {
 
 // While the function is called physics, it refers to anything that needs a
 // fixed timing
-fn physics() void {
-   while (true) {
-      std.time.sleep(std.time.ns_per_s * 0.1);
 
-      // network.send_pos(player_pos) catch {};
+// Network packets being sent also counts
+fn physics() void {
+   while (run_threads) : (
+      std.time.sleep(std.time.ns_per_s)
+   ){
+      std.time.sleep(std.time.ns_per_s);
+      network.send_pos(player_pos);
    }
 }
-
-// the network reciever thread.
-// I'm putting it here. Yes, I know I'm exposing network.ops. No, I don't care
 
 // should be called inside raylib BeginMode2D
 // TODO: assert we are inside raylib BeginMode2D
