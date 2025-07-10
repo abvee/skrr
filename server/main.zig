@@ -3,6 +3,7 @@ const net = std.net;
 const posix = std.posix;
 const assert = std.debug.assert;
 const tcp = @import("tcp.zig");
+const udp = @import("udp.zig");
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
 
 const stdin = std.io.getStdIn();
@@ -59,13 +60,14 @@ pub fn main() !void {
    // initialize
    try tcp.init();
    defer tcp.deinit();
+
+   try udp.init();
+   defer udp.deinit();
    
    // start tcp acceptor thread
-   const acceptor_thread = try std.Thread.spawn(.{}, acceptor, .{});
-   defer acceptor_thread.join();
+   _ = try std.Thread.spawn(.{}, acceptor, .{});
    // start tcp reciever tread
-   const receiver_thread = try std.Thread.spawn(.{}, receiver, .{});
-   defer receiver_thread.join();
+   _ = try std.Thread.spawn(.{}, receiver, .{});
 
    defer run_threads = false;
 
