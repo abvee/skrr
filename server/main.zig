@@ -37,7 +37,6 @@ const addr = net.Address.initIp4(
    [4]u8{127,0,0,1},
    12271
 );
-var sock: posix.socket_t = undefined;
 
 // This is supposed to be an rl.Vector2 for now, but it's kinda stupid linking
 // raylib to the server. I mean, we're not rendering anything....
@@ -64,10 +63,12 @@ pub fn main() !void {
    try udp.init();
    defer udp.deinit();
    
-   // start tcp acceptor thread
+   // tcp acceptor thread
    _ = try std.Thread.spawn(.{}, acceptor, .{});
-   // start tcp reciever tread
+   // tcp reciever tread
    _ = try std.Thread.spawn(.{}, receiver, .{});
+
+   _ = try std.Thread.spawn(.{}, pdata_sender, .{});
 
    defer run_threads = false;
 
@@ -76,20 +77,23 @@ pub fn main() !void {
    _ = try stdin.read(&buf);
 }
 
+// UDP thread to constantly broadcast player data
 fn pdata_sender() !void {
    var pkt: [2 + @sizeOf(pdata)]u8 =
       [_]u8{0} ** (2 + @sizeOf(pdata));
 
-   while (true) {
-      std.time.sleep(std.time.ns_per_s * 0.1);
+   while (run_threads) : (
+      std.time.sleep(std.time.ns_per_s * 1)
+   ) {
 
       // TODO: We are currently sending each player's position, one at a time.
       // Look into maybe sending all the positions at once to each player
-
       for (conns, 0..) |conn, i|
          if (conn) |_| {
             // This is bad code. We are relying on a number of things here
             // that might not be true always.
+
+            // Future me: Why was this bad code again ?
             pkt[0] = @intFromEnum(ops.POS);
             pkt[1] = @intCast(i);
             std.mem.copyForwards(
@@ -97,8 +101,7 @@ fn pdata_sender() !void {
                pkt[2..],
                std.mem.asBytes(&players[i]),
             );
-            broadcast(@intCast(i), &pkt)
-               catch {};
+            broadcast(@intCast(i), &pkt);
          };
    }
 }
@@ -114,39 +117,23 @@ test "hello packet" {
 }
 
 // broadcast packet to everyone except conns_id
-inline fn broadcast(conns_id: u8, pkt: []const u8) !void {
+inline fn broadcast(conns_id: u8, pkt: []const u8) void {
    for (conns, 0..) |conn, i| {
       if (i == conns_id) continue;
 
-      if (conn) |c|
-         _ = try posix.sendto(
-            sock,
-            pkt,
-            0,
-            &c.any,
-            c.getOsSockLen(),
-         );
+      // TODO: care and do something if we fail to send a UDP packet
+      if (conn) |c| {
+         udp.yeet(c, pkt) catch {};
+         std.debug.print("Sent position pkt: {x} to id: {}\n", .{pkt, i});
+      }
+
    }
 }
 
 // Accept new connections
 fn acceptor() !void {
    std.debug.print("Server is now accepting connections\n", .{});
-   // we only accept if we have space
    while (run_threads) {
-      // wait for a disconnect ??? 
-      // No, wait this might kill a connect on the client side ?
-      // We should instead accept a connection here and kill it right off
-      // TODO: figure what we should do. I'm thinking just tcp.deny_con()
-      // But that would requires us to check before we wait and check
-      // everytime, so it's a mess.
-      // frankly, I don't know what to do if the lobby is full. Maybe we do
-      // need that semaphore after all, just to check if the... wait a second
-      // We can just hang with a no-op here can we not ?
-      // I mean, we are doing it now. num_conns is the semaphore right ?
-      // Okay, hold on. is looping indefinitely bad ? I mean, who care right
-      // now, but whatever, let's do it
-
       // semaphore loop
       // This means the lobby is full
       // We can only accept connections when someone has disconnected

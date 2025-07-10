@@ -20,8 +20,20 @@ pub fn init() !void {
       &addr.any,
       addr.getOsSockLen(),
    );
+
+
 }
 
 pub fn deinit() void {
    posix.close(sock);
+}
+
+pub fn yeet(client: net.Address, pkt: []const u8) !void {
+   _ = try posix.sendto(
+      sock,
+      pkt,
+      0,
+      &client.any,
+      client.getOsSockLen(),
+   );
 }
