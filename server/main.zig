@@ -69,6 +69,9 @@ pub fn main() !void {
    _ = try std.Thread.spawn(.{}, receiver, .{});
 
    _ = try std.Thread.spawn(.{}, pdata_sender, .{});
+   // udp receiver
+   // TODO: maybe make a unified packet handler
+   _ = try std.Thread.spawn(.{}, pdata_receiver, .{});
 
    defer run_threads = false;
 
@@ -237,5 +240,38 @@ fn receiver() !void {
             }
          }
       }
+   }
+}
+
+fn pdata_receiver() !void {
+   var buf: [1024]u8 = [_]u8{0} ** 1024;
+   var pkt: []u8 = undefined;
+
+   hot: switch (ops.DEFAULT) {
+      ops.DEFAULT => {
+         var client: net.Address = undefined;
+         pkt = udp.yoink(&buf, &client)
+            catch continue :hot ops.DEFAULT;
+         const id = pkt[1];
+         std.debug.print("Received UDP packet: {x}\n", .{pkt});
+
+         // verify that the client is who the id claims
+         // TODO: anti cheat handle this
+         assert(conns[id] != null);
+
+         // assert(conns[id].?.eql(client));
+         // NOTE: we can't do this ^. conns stores the TCP socket, while
+         // recvfrom get's the client's UDP socket address.
+
+         // For now, we can just assume everything is fine, but we should
+         // probably send a UDP hello packet with a secret or something as well
+         // from the client, so we can record their UDP connection as well
+
+         continue :hot ops.valid(pkt[0]);
+      },
+      ops.POS => {
+         continue :hot ops.DEFAULT;
+      },
+      else => continue :hot ops.DEFAULT,
    }
 }
