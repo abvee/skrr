@@ -112,3 +112,33 @@ pub fn send_pos(position: rl.Vector2) void {
    std.debug.print("Client sent position: {d:.2} {d:.2}\n", position);
    udp.yeet(&buf) catch {};
 }
+
+// the UDP receiver that updates our positions
+pub fn receiver(others: []?rl.Vector2) void {
+   var buf: [1024]u8 = [_]u8{0} ** 1024;
+   var pkt: []u8 = undefined;
+
+   hot: switch (ops.NULL) {
+      ops.NULL => {
+         pkt = udp.yoink(&buf)
+            catch continue :hot ops.NULL;
+         std.debug.print("Got packet: {x}\n", .{pkt});
+         const player_id = pkt[1];
+
+         // The server is never supposed to be wrong, so this assert can stay
+         // forever
+         assert(others[player_id] != null);
+         continue :hot ops.valid(pkt[0]);
+      },
+      ops.POS => {
+         others[pkt[1]] = std.mem.bytesToValue(
+            rl.Vector2,
+            pkt[2..2 + @sizeOf(rl.Vector2)],
+         );
+         continue :hot ops.NULL;
+      },
+      else => unreachable,
+      // change this to continue in the final build, right
+      // now it's useful for debugging
+   }
+}

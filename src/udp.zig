@@ -34,3 +34,8 @@ pub fn deinit() void {
 pub inline fn yeet(pkt: []const u8) !void {
    _ = try server.write(pkt);
 }
+
+pub inline fn yoink(buf: []u8) ![]u8 {
+   return buf[0..try server.read(buf)];
+}
+

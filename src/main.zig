@@ -72,6 +72,9 @@ pub fn main() !void {
    _ = try std.Thread.spawn(.{}, physics, .{});
    defer run_threads = false;
 
+   // this also constantly writes to the others array
+   _ = try std.Thread.spawn(.{}, network.receiver, .{&others});
+
    var camera: rl.Camera2D = rl.Camera2D{
       .target = player_pos,
       .offset = rl.Vector2{.x = window_width/2, .y = window_height/2},
