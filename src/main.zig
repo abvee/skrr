@@ -148,7 +148,6 @@ fn physics() void {
    while (run_threads) : (
       std.time.sleep(std.time.ns_per_s)
    ){
-      std.time.sleep(std.time.ns_per_s);
       network.send_pos(player_pos);
    }
 }

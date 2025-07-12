@@ -270,6 +270,11 @@ fn pdata_receiver() !void {
          continue :hot ops.valid(pkt[0]);
       },
       ops.POS => {
+         const id = pkt[1];
+         players[id] = std.mem.bytesToValue(
+            pdata,
+            pkt[2..],
+         );
          continue :hot ops.DEFAULT;
       },
       else => continue :hot ops.DEFAULT,
