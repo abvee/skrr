@@ -72,8 +72,13 @@ pub fn main() !void {
    _ = try std.Thread.spawn(.{}, physics, .{});
    defer run_threads = false;
 
-   // this also constantly writes to the others array
+   // These two threads write to the others array
+   // both are blind writes. While logic would dictate that there can't be a
+   // race condition, bugs and errors could make it possible
+
+   // TODO: put some semaphore stuff to stop race conditions
    _ = try std.Thread.spawn(.{}, network.receiver, .{&others});
+   _ = try std.Thread.spawn(.{}, network.tcp_receiver, .{&others});
 
    var camera: rl.Camera2D = rl.Camera2D{
       .target = player_pos,

@@ -18,6 +18,7 @@ pub const ops = enum(u8) {
    HELLO = 0xff,
    DISCONNECT = 0x11,
    POS = 0x00,
+   NP = 0x33,
 
    // return the enum
    pub fn valid(in: @typeInfo(@This()).@"enum".tag_type) @This() {
@@ -134,7 +135,7 @@ pub fn receiver(others: []?rl.Vector2) void {
       ops.NULL => {
          pkt = udp.yoink(&buf)
             catch continue :hot ops.NULL;
-         std.debug.print("Got packet: {x}\n", .{pkt});
+         std.debug.print("Got UDP packet: {x}\n", .{pkt});
          const player_id = pkt[1];
 
          // We might have gotten a packet from a player who has just joint, but
@@ -145,7 +146,7 @@ pub fn receiver(others: []?rl.Vector2) void {
          // waiting to happen.
 
          // it might be better to make the joining player wait for everyone's
-         // ack
+         // ack that he has joined
 
          // Since we don't have a new join protocol yet, this will receive
          // packets from a non visible player.
@@ -160,6 +161,30 @@ pub fn receiver(others: []?rl.Vector2) void {
             rl.Vector2,
             pkt[2..2 + @sizeOf(rl.Vector2)],
          );
+         continue :hot ops.NULL;
+      },
+      else => unreachable,
+      // change this to continue in the final build, right
+      // now it's useful for debugging
+   }
+}
+
+pub fn tcp_receiver(others: []?rl.Vector2) void {
+   var buf: [1024]u8 = [_]u8{0} ** 1024;
+   var pkt: []u8 = undefined;
+
+   hot: switch (ops.NULL) {
+      ops.NULL => {
+         pkt = tcp.yoink(&buf)
+            catch continue :hot ops.NULL;
+         std.debug.print("Got TCP packet: {x}\n", .{pkt});
+
+         continue :hot ops.valid(pkt[0]);
+      },
+      ops.NP => {
+         const player_id = pkt[1];
+         std.debug.print("Player with id {} joined the game\n", .{player_id});
+         others[player_id] = rl.Vector2{.x = 0, .y = 0};
          continue :hot ops.NULL;
       },
       else => unreachable,
