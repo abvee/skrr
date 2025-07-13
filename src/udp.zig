@@ -9,6 +9,9 @@ const addr = net.Address.initIp4(
 
 var server: std.fs.File = undefined;
 
+// the port UDP socket is on
+pub var port: u16 = undefined;
+
 pub fn init() !void {
    const sock = try posix.socket(
       posix.AF.INET,
@@ -21,6 +24,16 @@ pub fn init() !void {
       &addr.any,
       comptime addr.getOsSockLen(),
    );
+
+   // this is to get the port
+   var client: net.Address = undefined;
+   var client_len: posix.socklen_t = @sizeOf(net.Address);
+   try posix.getsockname(
+      sock,
+      &client.any,
+      &client_len,
+   );
+   port = client.getPort();
 
    server = std.fs.File{
       .handle = sock,

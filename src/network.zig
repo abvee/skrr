@@ -56,6 +56,7 @@ pub fn new_join(others: []?rl.Vector2) !void {
    // get hello packet from server
    var buf: [1024]u8 = [_]u8{0} ** 1024;
    const pkt = try tcp.yoink(&buf);
+   std.debug.print("Received server hello packet: {x}\n", .{pkt});
 
    // we should get the first byte as the op for hello
    assert(pkt[0] == @intFromEnum(ops.HELLO));
@@ -75,6 +76,17 @@ pub fn new_join(others: []?rl.Vector2) !void {
       // world space
       others[i] = rl.Vector2{.x = 0, .y = 0};
    }
+
+   // send your hello packet
+   buf[0] = @intFromEnum(ops.HELLO);
+   buf[1] = id;
+   std.mem.copyForwards(
+      u8,
+      buf[2..4], // port is 2 bytes
+      std.mem.asBytes(&udp.port),
+   );
+   try tcp.yeet(buf[0..4]);
+   std.debug.print("Sent Hello response: {x}\n", .{buf[0..4]});
 }
 
 pub fn disconnect() void {
@@ -125,9 +137,22 @@ pub fn receiver(others: []?rl.Vector2) void {
          std.debug.print("Got packet: {x}\n", .{pkt});
          const player_id = pkt[1];
 
-         // The server is never supposed to be wrong, so this assert can stay
-         // forever
-         assert(others[player_id] != null);
+         // We might have gotten a packet from a player who has just joint, but
+         // you haven't been informed yet.
+
+         // Quite frankly, I can see race issues later on. What if you were not
+         // informed and the other player killed you ? That's a crash just
+         // waiting to happen.
+
+         // it might be better to make the joining player wait for everyone's
+         // ack
+
+         // Since we don't have a new join protocol yet, this will receive
+         // packets from a non visible player.
+
+         // Temporary handling:
+         if (others[player_id] == null) continue :hot ops.NULL;
+
          continue :hot ops.valid(pkt[0]);
       },
       ops.POS => {

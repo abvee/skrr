@@ -47,8 +47,15 @@ const pdata = struct {
    y: f32,
 };
 
+// Okay, different idea
+// what if I use TCP to send the UDP address lmao ?
+// like, we could just send the UDP port through the TCP connection then use
+// initIp4() to initialise.. this
+// That sounds like a terrible idea, but whatever. Because the alternative is to
 var conns: [NUM_PLAYERS]?net.Address = .{null} ** NUM_PLAYERS;
+var tcp_conns: [NUM_PLAYERS]net.Address = undefined;
 var num_conns: u16 = 0; // number of active players
+
 var players: [NUM_PLAYERS]pdata = undefined;
 
 var run_threads = true;
@@ -152,11 +159,10 @@ fn acceptor() !void {
       }
 
       // get the client of new person
-      conns[id] = try tcp.new_con(id);
-      num_conns += 1;
+      tcp_conns[id] = try tcp.new_con(id);
       std.debug.print("New connection: {any}:{} id: {}\n", .{
-         std.mem.asBytes(&conns[id].?.in.sa.addr),
-         conns[id].?.getPort(),
+         std.mem.asBytes(&tcp_conns[id].in.sa.addr),
+         tcp_conns[id].getPort(),
          id,
       });
 
@@ -164,6 +170,33 @@ fn acceptor() !void {
       var buf: [1024]u8 = [_]u8{0} ** 1024;
       const pkt = hello(id, &buf);
       try tcp.yeet(id, pkt); // sending a packet should not fail
+      std.debug.print("Sent id {} hello packet: {x}\n", .{id, pkt});
+
+      // Wait for the response. We shouldn't do anything until then
+      // NOTE: this might never come, which would hang the acceptor thread forever.
+      // The solution would possibly be to offload the entire hand shake
+      // process (hello packet and it's response) to another async thingy
+      // TODO: What I said above ^
+
+      // blocks until id is ready to read
+      try tcp.block(id);
+      const response_pkt = try tcp.yoink(id, &buf);
+      std.debug.print("Received hello packet from id {}: {x}\n", .{
+         id,
+         response_pkt,
+      });
+
+      // TODO: anti cheat stuff here
+      assert(response_pkt[0] == @intFromEnum(ops.HELLO));
+      assert(response_pkt[1] == id);
+      // NOTE: this ^ can be safely removed
+      // We know it's from this id
+
+      conns[id] = tcp_conns[id];
+      conns[id].?.setPort(
+         std.mem.bytesToValue(u16, response_pkt[2..4]),
+      );
+      num_conns += 1;
    }
 }
 
@@ -203,19 +236,18 @@ fn receiver() !void {
    ) {
       for (conns, 0..) |conn, i| {
          // player exists
-         if (conn) |c| {
+         if (conn) |_| {
             pkt = tcp.yoink(@intCast(i), &buf)
                catch |e| switch (e) {
                   error.WouldBlock => {
-                     std.debug.print("id {} has no packets\n", .{i});
+                     std.debug.print("id {} has no TCP packets\n", .{i});
                      continue;
                   },
                   // ^ means no packet
                   else => return e,
                };
-            std.debug.print("Recieved packet from {any}:{} - {x}\n", .{
-               std.mem.asBytes(&c.in.sa.addr),
-               c.getPort(),
+            std.debug.print("Recieved TCP packet from id {}:- {x}\n", .{
+               i,
                pkt,
             });
             // TODO: move this handling somewhere else
@@ -253,7 +285,7 @@ fn pdata_receiver() !void {
          pkt = udp.yoink(&buf, &client)
             catch continue :hot ops.DEFAULT;
          const id = pkt[1];
-         std.debug.print("Received UDP packet: {x}\n", .{pkt});
+         std.debug.print("Received UDP packet from id {}: {x}\n", .{id,pkt});
 
          // verify that the client is who the id claims
          // TODO: anti cheat handle this

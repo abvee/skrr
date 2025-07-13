@@ -103,3 +103,17 @@ pub inline fn disconnect(id: u8) void {
    clients[id].handle = 0; // what do I even do about you ?
    // ^ has to be done because deinit() will try and close it again
 }
+
+// blocks polled id until it's ready to read
+pub fn block(id: u16) !void {
+   var pollfd: [1]posix.pollfd = [_]posix.pollfd{
+      posix.pollfd{
+         .fd = clients[id].handle,
+         .events = posix.POLL.IN,
+         .revents = 0,
+      }
+   };
+
+   // block a non blocking socket
+   _ = try posix.poll(&pollfd, -1);
+}
