@@ -266,22 +266,26 @@ fn receiver() !void {
                i,
                pkt,
             });
-            // TODO: move this handling somewhere else
-            // We should be able to read more and more packets ideally for both
-            // TCP and UDP while still receiving them. This would require a
-            // leaky bucket implementation on the UDP side, but TCP should do
-            // with just a queue. We'll do this later.
 
             // each packet would need an operation and an assert
             const operation = ops.valid(pkt[0]);
             assert(i == pkt[1]);
 
+            // TODO: move this handling somewhere else
+            // We should be able to read more and more packets ideally for both
+            // TCP and UDP while still receiving them. This would require a
+            // leaky bucket implementation on the UDP side, but TCP should do
+            // with just a queue. We'll do this later.
             switch (operation) {
                ops.DISCONNECT => {
                   conns[i] = null;
                   num_conns -= 1;
 
                   tcp.disconnect(@intCast(i));
+                  tcp.broadcast(@intCast(i), &.{
+                     @intFromEnum(ops.DISCONNECT),
+                     @intCast(i),
+                  });
                   std.debug.print("Disconnected id {}\n", .{i});
                },
                else => {}, // Anything else for now, we ignore

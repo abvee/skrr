@@ -185,6 +185,14 @@ pub fn tcp_receiver(others: []?rl.Vector2) void {
          const player_id = pkt[1];
          std.debug.print("Player with id {} joined the game\n", .{player_id});
          others[player_id] = rl.Vector2{.x = 0, .y = 0};
+
+         continue :hot ops.NULL;
+      },
+      ops.DISCONNECT => {
+         const player_id = pkt[1];
+         std.debug.print("Player with id {} disconnected\n", .{player_id});
+         others[player_id] = null;
+
          continue :hot ops.NULL;
       },
       else => unreachable,
