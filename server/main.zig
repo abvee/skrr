@@ -14,6 +14,7 @@ const ops = enum(u16) {
    HELLO = 0xff,
    DISCONNECT = 0x11,
    POS = 0x00,
+   NP = 0x33, // new player
 
    // check if the integer is a valid enum
    // Return the enum
@@ -197,13 +198,21 @@ fn acceptor() !void {
       assert(response_pkt[0] == @intFromEnum(ops.HELLO));
       assert(response_pkt[1] == id);
       // NOTE: this ^ can be safely removed
-      // We know it's from this id
+      // We know it's from this id, so the client doesn't need to send it.
 
       conns[id] = tcp_conns[id];
       conns[id].?.setPort(
          std.mem.bytesToValue(u16, response_pkt[2..4]),
       );
       num_conns += 1;
+
+      // we then broadcast to everyone that a new player has joined
+      buf[0] = @intFromEnum(ops.NP);
+      buf[1] = @intCast(id); // id of the new player
+      tcp.broadcast(id, buf[0..2]);
+      std.debug.print("Broadcasted new player packet for id {}: {x}\n",
+         .{id, buf[0..2]}
+      );
    }
 }
 

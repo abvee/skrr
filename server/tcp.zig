@@ -80,7 +80,7 @@ pub fn new_con(i: u16) !net.Address {
 }
 
 // write packet to that client
-pub inline fn yeet(id: u16, pkt: []u8) !void {
+pub inline fn yeet(id: u16, pkt: []const u8) !void {
    // TODO: assert that the file handle is not the default, ie, the client
    // exists
    assert(clients[id].handle != 0);
@@ -102,6 +102,7 @@ pub inline fn disconnect(id: u8) void {
    clients[id].close();
    clients[id].handle = 0; // what do I even do about you ?
    // ^ has to be done because deinit() will try and close it again
+   // NOTE: also useful for when a client disconnects, this resets everything
 }
 
 // blocks polled id until it's ready to read
@@ -116,4 +117,14 @@ pub fn block(id: u16) !void {
 
    // block a non blocking socket
    _ = try posix.poll(&pollfd, -1);
+}
+
+// broadcast TCP packet to everyone but id
+pub fn broadcast(id: u16, pkt: []const u8) void {
+   for (clients, 0..) |client, i| {
+      if (client.handle == 0) continue // basically no connection
+      else if (i == id) continue;
+
+      yeet(@intCast(i), pkt) catch {};
+   }
 }
