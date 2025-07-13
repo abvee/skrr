@@ -54,3 +54,16 @@ pub inline fn yoink(buf: []u8, client: *net.Address) ![]u8 {
 
    return buf[0..n];
 }
+
+pub fn broadcast(id: u16, pkt: []u8, conns: []?net.Address) void {
+   for (conns, 0..) |conn, i| {
+      if (i == id) continue;
+
+      // TODO: care and do something if we fail to send a UDP packet
+      if (conn) |c| {
+         yeet(c, pkt) catch {};
+         std.debug.print("Sent position pkt: {x} to id: {}\n", .{pkt, i});
+      }
+
+   }
+}

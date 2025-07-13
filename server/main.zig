@@ -93,7 +93,7 @@ fn pdata_sender() !void {
       [_]u8{0} ** (2 + @sizeOf(pdata));
 
    while (run_threads) : (
-      std.time.sleep(std.time.ns_per_s * 1)
+      std.time.sleep(std.time.ns_per_s)
    ) {
 
       // TODO: We are currently sending each player's position, one at a time.
@@ -111,7 +111,7 @@ fn pdata_sender() !void {
                pkt[2..],
                std.mem.asBytes(&players[i]),
             );
-            broadcast(@intCast(i), &pkt);
+            udp.broadcast(@intCast(i), &pkt, &conns);
          };
    }
 }
@@ -126,21 +126,28 @@ test "hello packet" {
    std.debug.print("{}\n", .{id});
 }
 
-// broadcast packet to everyone except conns_id
-inline fn broadcast(conns_id: u8, pkt: []const u8) void {
-   for (conns, 0..) |conn, i| {
-      if (i == conns_id) continue;
-
-      // TODO: care and do something if we fail to send a UDP packet
-      if (conn) |c| {
-         udp.yeet(c, pkt) catch {};
-         std.debug.print("Sent position pkt: {x} to id: {}\n", .{pkt, i});
-      }
-
-   }
-}
-
 // Accept new connections
+// We have to rework this
+// I think it would be better if there was an async implementation that could
+// deal with all the handshaking that comes with accepting a new connection
+
+// I mean, we have to send a hello packet, we have to receive a packet and then
+// broadcast to everyone else that a new player has joined.
+// I was thinking of moving all of this to a new file in itself called
+// "handshaking.zig".
+
+// Because we haven't even scratched the surface here. There is so much
+// handshaking to do before ever joining a single match. We have to deal with
+// levels, naming, secrets and anti-cheat, colour, gamemode, character and a
+// ton of other stuff
+
+// And dumping all that in this acceptor thread that's supposed to block and
+// listen of new connections only makes 0 sense.
+
+// so there is that future refactor to do. I'll make an async implementation,
+// probably a thread pool to do all that work for me.
+
+// for now though, I'll just broadcast the writing everywhere
 fn acceptor() !void {
    std.debug.print("Server is now accepting connections\n", .{});
    while (run_threads) {
@@ -275,6 +282,7 @@ fn receiver() !void {
    }
 }
 
+// UDP receiver
 fn pdata_receiver() !void {
    var buf: [1024]u8 = [_]u8{0} ** 1024;
    var pkt: []u8 = undefined;
