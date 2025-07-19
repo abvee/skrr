@@ -12,6 +12,8 @@ const window_height = 900;
 
 const TILE = @import("constants.zig").TILE;
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
+const RADIUS = @import("constants.zig").RADIUS;
+const GUN_RADIUS = @import("constants.zig").GUN_RADIUS;
 const SPEED = 0.1;
 
 var run_threads: bool = true;
@@ -25,6 +27,11 @@ var player: rl.Rectangle = rl.Rectangle{
    .width = TILE,
    .height = TILE,
 }; // the player rectangle
+// the center of the gun
+var gun: rl.Vector2 = rl.Vector2{
+   .x = 0,
+   .y = 0,
+};
 
 // other player positions
 var others: [NUM_PLAYERS]?rl.Vector2 = .{null} ** NUM_PLAYERS;
@@ -121,22 +128,27 @@ pub fn main() !void {
 
       camera.target = player_pos;
 
+      // gun stuff
+      gun = update_gun_pos();
+
       rl.BeginDrawing();
       defer rl.EndDrawing();
-
       rl.ClearBackground(rl.BLACK);
+      {
+         rl.BeginMode2D(camera);
+         defer rl.EndMode2D();
 
-      rl.BeginMode2D(camera);
-      defer rl.EndMode2D();
+         rl.DrawRectangleRec(player, rl.RED);
+         rl.DrawCircleV(gun, GUN_RADIUS, rl.ORANGE);
 
-      rl.DrawRectangleRec(player, rl.RED);
+         // draw level
+         for (lvl) |l|
+            rl.DrawRectangleRec(l, rl.RAYWHITE);
 
-      // draw level
-      for (lvl) |l|
-         rl.DrawRectangleRec(l, rl.RAYWHITE);
-
-      // draw other players
-      draw_others();
+         // draw other players
+         draw_others();
+      }
+      debug();
    }
 }
 
@@ -175,4 +187,50 @@ inline fn draw_others() void {
          rl.DrawRectangleRec(others_rec[i], rl.SKYBLUE);
       }
    }
+}
+
+inline fn update_gun_pos() rl.Vector2 {
+   const pos = rl.GetMousePosition();
+   // we have to shift the origin to the center of the screen
+   const shifted = rl.Vector2{
+      .x = pos.x - window_width / 2,
+      .y = pos.y - window_height / 2,
+   };
+
+   // get the angle in radians
+   const angle = std.math.atan2(shifted.y, shifted.x);
+
+   // Return the position of the center of the gun in world space
+   return rl.Vector2{
+      .x = std.math.cos(angle) * RADIUS + player_pos.x,
+      .y = std.math.sin(angle) * RADIUS + player_pos.y,
+   };
+}
+
+inline fn debug() void {
+   const pos = rl.GetMousePosition();
+   // we have to shift the origin to the center of the screen
+   const shifted = rl.Vector2{
+      .x = pos.x - window_width / 2,
+      .y = pos.y - window_height / 2,
+   };
+
+   // get the angle in radians
+   const angle = std.math.atan2(shifted.y, shifted.x);
+   rl.DrawText(
+      rl.TextFormat("%f", angle * 180 / std.math.pi),
+      window_width / 2,
+      window_height - 40,
+      20,
+      rl.GREEN
+   );
+
+   rl.DrawLineV(
+      rl.Vector2{
+         .x = window_width / 2,
+         .y = window_height / 2,
+      },
+      pos,
+      rl.GREEN
+   );
 }
