@@ -170,7 +170,7 @@ test "raylib test" {
 // Network packets being sent also counts
 fn physics() void {
    while (run_threads) : (
-      std.time.sleep(std.time.ns_per_s)
+      std.time.sleep(TICK)
    ){
       network.send_pos(player_pos, gun_angle);
    }
@@ -199,7 +199,7 @@ inline fn draw_others() void {
                .y = std.math.sin(others_angles[i]) * RADIUS + o.?.y,
             },
             GUN_RADIUS,
-            rl.SKYBLUE,
+            rl.PURPLE,
          );
       }
    }

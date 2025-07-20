@@ -5,6 +5,7 @@ const assert = std.debug.assert;
 const tcp = @import("tcp.zig");
 const udp = @import("udp.zig");
 const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
+const TICK = @import("constants.zig").TICK;
 
 const stdin = std.io.getStdIn();
 
@@ -95,7 +96,7 @@ fn pdata_sender() !void {
       [_]u8{0} ** (2 + @sizeOf(pdata));
 
    while (run_threads) : (
-      std.time.sleep(std.time.ns_per_s)
+      std.time.sleep(TICK)
    ) {
 
       // TODO: We are currently sending each player's position, one at a time.
@@ -249,7 +250,7 @@ fn receiver() !void {
    var pkt: []u8 = undefined;
 
    while (run_threads) : (
-      std.time.sleep(std.time.ns_per_s)
+      std.time.sleep(TICK)
    ) {
       for (conns, 0..) |conn, i| {
          // player exists
