@@ -5,5 +5,5 @@ pub const NUM_PLAYERS = 8; // max players
 const std = @import("std");
 const math = std.math;
 
-pub const GUN_RADIUS = 10;
+pub const GUN_RADIUS = 20;
 pub const RADIUS = @as(f32, @floatFromInt(TILE)) / math.sqrt2 + GUN_RADIUS;

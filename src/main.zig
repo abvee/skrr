@@ -28,10 +28,7 @@ var player: rl.Rectangle = rl.Rectangle{
    .height = TILE,
 }; // the player rectangle
 // the center of the gun
-var gun: rl.Vector2 = rl.Vector2{
-   .x = 0,
-   .y = 0,
-};
+var gun_angle: f32 = 0;
 
 // other player positions
 var others: [NUM_PLAYERS]?rl.Vector2 = .{null} ** NUM_PLAYERS;
@@ -129,7 +126,9 @@ pub fn main() !void {
       camera.target = player_pos;
 
       // gun stuff
-      gun = update_gun_pos();
+      // writes to gun_angle
+      // retuns the position of the gun circle
+      const gun = update_gun();
 
       rl.BeginDrawing();
       defer rl.EndDrawing();
@@ -189,7 +188,9 @@ inline fn draw_others() void {
    }
 }
 
-inline fn update_gun_pos() rl.Vector2 {
+// gun_angle is writen to
+// returns the circle of the Gun's position.
+inline fn update_gun() rl.Vector2 {
    const pos = rl.GetMousePosition();
    // we have to shift the origin to the center of the screen
    const shifted = rl.Vector2{
@@ -198,12 +199,13 @@ inline fn update_gun_pos() rl.Vector2 {
    };
 
    // get the angle in radians
-   const angle = std.math.atan2(shifted.y, shifted.x);
+   gun_angle = std.math.atan2(shifted.y, shifted.x);
+   // We need to make this available to the the sender thread
 
    // Return the position of the center of the gun in world space
    return rl.Vector2{
-      .x = std.math.cos(angle) * RADIUS + player_pos.x,
-      .y = std.math.sin(angle) * RADIUS + player_pos.y,
+      .x = std.math.cos(gun_angle) * RADIUS + player_pos.x,
+      .y = std.math.sin(gun_angle) * RADIUS + player_pos.y,
    };
 }
 
