@@ -10,11 +10,13 @@ const network = @import("network.zig");
 const window_width = 1440;
 const window_height = 900;
 
-const TILE = @import("constants.zig").TILE;
-const NUM_PLAYERS = @import("constants.zig").NUM_PLAYERS;
-const RADIUS = @import("constants.zig").RADIUS;
-const GUN_RADIUS = @import("constants.zig").GUN_RADIUS;
-const SPEED = 0.1;
+const constants = @import("constants.zig");
+const TILE = constants.TILE;
+const NUM_PLAYERS = constants.NUM_PLAYERS;
+const RADIUS = constants.RADIUS;
+const GUN_RADIUS = constants.GUN_RADIUS;
+const TICK = constants.TICK;
+const SPEED = constants.SPEED;
 
 var run_threads: bool = true;
 
