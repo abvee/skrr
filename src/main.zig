@@ -220,7 +220,7 @@ inline fn debug() void {
    // get the angle in radians
    const angle = std.math.atan2(shifted.y, shifted.x);
    rl.DrawText(
-      rl.TextFormat("%f", angle * 180 / std.math.pi),
+      rl.TextFormat("Angle: %f", angle * 180 / std.math.pi),
       window_width / 2,
       window_height - 40,
       20,
@@ -234,5 +234,13 @@ inline fn debug() void {
       },
       pos,
       rl.GREEN
+   );
+
+   rl.DrawText(
+      rl.TextFormat("FPS: %d", rl.GetFPS()),
+      window_width / 2,
+      40,
+      20,
+      rl.GREEN,
    );
 }
