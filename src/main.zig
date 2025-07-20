@@ -187,6 +187,18 @@ inline fn draw_others() void {
          others_rec[i].y = o.?.y - TILE / 2;
 
          rl.DrawRectangleRec(others_rec[i], rl.SKYBLUE);
+
+         // draw their gun
+         // NOTE: we need the vector version of this because rl.DrawCircle
+         // takes integers instead of floats
+         rl.DrawCircleV(
+            rl.Vector2{
+               .x = std.math.cos(others_angles[i]) * RADIUS + o.?.x,
+               .y = std.math.sin(others_angles[i]) * RADIUS + o.?.y,
+            },
+            GUN_RADIUS,
+            rl.SKYBLUE,
+         );
       }
    }
 }
