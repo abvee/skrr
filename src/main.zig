@@ -30,7 +30,9 @@ var player: rl.Rectangle = rl.Rectangle{
 // the center of the gun
 var gun_angle: f32 = 0;
 
-// other player positions
+// other player data
+// consider moving these arrays to a separate file or reorganising them into a
+// better data structure if we ever need to increase performance
 var others: [NUM_PLAYERS]?rl.Vector2 = .{null} ** NUM_PLAYERS;
 var others_rec: [NUM_PLAYERS]rl.Rectangle = [_]rl.Rectangle{
    rl.Rectangle{
@@ -39,6 +41,7 @@ var others_rec: [NUM_PLAYERS]rl.Rectangle = [_]rl.Rectangle{
    },
 } ** NUM_PLAYERS;
 // this ^ might be unnecessary
+var others_angles: [NUM_PLAYERS]f32 = .{0} ** NUM_PLAYERS;
 
 pub fn main() !void {
    // General purpose allocator
@@ -81,7 +84,7 @@ pub fn main() !void {
    // race condition, bugs and errors could make it possible
 
    // TODO: put some semaphore stuff to stop race conditions
-   _ = try std.Thread.spawn(.{}, network.receiver, .{&others});
+   _ = try std.Thread.spawn(.{}, network.receiver, .{&others, &others_angles});
    _ = try std.Thread.spawn(.{}, network.tcp_receiver, .{&others});
 
    var camera: rl.Camera2D = rl.Camera2D{

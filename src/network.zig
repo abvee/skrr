@@ -143,7 +143,7 @@ pub fn send_pos(position: rl.Vector2, angle: f32) void {
 }
 
 // the UDP receiver that updates our positions
-pub fn receiver(others: []?rl.Vector2) void {
+pub fn receiver(others: []?rl.Vector2, others_angles: []f32) void {
    var buf: [1024]u8 = [_]u8{0} ** 1024;
    var pkt: []u8 = undefined;
 
@@ -173,10 +173,24 @@ pub fn receiver(others: []?rl.Vector2) void {
          continue :hot ops.valid(pkt[0]);
       },
       ops.POS => {
-         others[pkt[1]] = std.mem.bytesToValue(
+         // TODO: handle this instead of erroring out
+         assert(pkt.len >= 2 + @sizeOf(rl.Vector2) + @sizeOf(f32));
+
+         comptime var i = 2; // packet index
+         const player_id = pkt[1];
+
+
+         others[player_id] = std.mem.bytesToValue(
             rl.Vector2,
-            pkt[2..2 + @sizeOf(rl.Vector2)],
+            pkt[i..i + @sizeOf(rl.Vector2)],
          );
+         i += @sizeOf(rl.Vector2);
+
+         others_angles[player_id] = std.mem.bytesToValue(
+            f32,
+            pkt[i..i + @sizeOf(f32)],
+         );
+
          continue :hot ops.NULL;
       },
       else => unreachable,
