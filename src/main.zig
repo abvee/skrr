@@ -167,7 +167,7 @@ fn physics() void {
    while (run_threads) : (
       std.time.sleep(std.time.ns_per_s)
    ){
-      network.send_pos(player_pos);
+      network.send_pos(player_pos, gun_angle);
    }
 }
 

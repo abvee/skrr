@@ -110,19 +110,35 @@ test "A connect and disconnect test" {
    _ = try stdin.read(&x);
 }
 
-pub fn send_pos(position: rl.Vector2) void {
-   var buf: [2 + @sizeOf(rl.Vector2)]u8 =
-      [_]u8{0} ** (2 + @sizeOf(rl.Vector2));
+pub fn send_pos(position: rl.Vector2, angle: f32) void {
+   var buf: [2 + @sizeOf(rl.Vector2) + @sizeOf(f32)]u8 =
+      [_]u8{0} ** (2 + @sizeOf(rl.Vector2) + @sizeOf(f32));
+   comptime var buf_i = 0; // the buffer index
 
-   buf[0] = @intFromEnum(ops.POS);
-   buf[1] = id;
+   buf[buf_i] = @intFromEnum(ops.POS);
+   buf_i += 1;
+   buf[buf_i] = id;
+   buf_i += 1;
+
+   // position
    std.mem.copyForwards(
       u8,
-      buf[2..],
+      buf[buf_i..buf_i + @sizeOf(rl.Vector2)],
       std.mem.asBytes(&position),
    );
+   buf_i += @sizeOf(rl.Vector2);
 
-   std.debug.print("Client sent position: {d:.2} {d:.2}\n", position);
+   std.mem.copyForwards(
+      u8,
+      buf[buf_i..buf_i + @sizeOf(f32)],
+      std.mem.asBytes(&angle),
+   );
+
+   std.debug.print("Client sent position: {d:.2} {d:.2} and angle: {}\n", .{
+      position.x, position.y,
+      angle,
+   });
+
    udp.yeet(&buf) catch {};
 }
 

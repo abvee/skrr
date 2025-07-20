@@ -46,6 +46,7 @@ const addr = net.Address.initIp4(
 const pdata = struct {
    x: f32,
    y: f32,
+   angle: f32,
 };
 
 // Okay, different idea
