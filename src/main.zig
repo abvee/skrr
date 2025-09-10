@@ -47,14 +47,14 @@ var others_angles: [NUM_PLAYERS]f32 = .{0} ** NUM_PLAYERS;
 
 pub fn main() !void {
    // General purpose allocator
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        const deinit_status = gpa.deinit();
-        // can't try in defer as defer is executed after we return
-        if (deinit_status == .leak) std.testing.expect(false)
+   var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+   const allocator = gpa.allocator();
+   defer {
+      const deinit_status = gpa.deinit();
+      // can't try in defer as defer is executed after we return
+      if (deinit_status == .leak) std.testing.expect(false)
          catch @panic("Memory leak");
-    }
+   }
 
    // This needs to be set for making the window tiling on sway
    rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);
